@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +54,7 @@ fun LogRoot(
 }
 
 /** Every saved test, grouped by film, with a one-line summary on top. */
+@OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec is still marked experimental.
 @Composable
 fun LogScreen(state: LogState, onOpenLibrary: () -> Unit, onOpenSettings: () -> Unit) {
     // Focus starts on the first row once there are results (▲▼ then moves through them).
@@ -95,17 +100,22 @@ fun LogScreen(state: LogState, onOpenLibrary: () -> Unit, onOpenSettings: () -> 
         Box(Modifier.fillMaxWidth().height(1.dp).background(LineColor))
         // LazyColumn only builds the rows that are on screen, and scrolls by itself
         // when D-pad focus moves to a row below the edge.
-        // LEFT / RIGHT do nothing on a row: there's nothing beside it.
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .blockFocusExit(FocusDirection.Left, FocusDirection.Right),
-        ) {
-            itemsIndexed(state.rows, key = { _, row -> row.result.id }) { index, row ->
-                LogTableRow(
-                    row = row,
-                    modifier = if (index == 0) Modifier.focusRequester(firstRowFocus) else Modifier,
-                )
+        // On a TV, Compose by default keeps the focused row ~30% down the list, so it
+        // scrolls after a few presses and leaves half a row under the headings. A plain
+        // BringIntoViewSpec scrolls only when the focused row would leave the screen.
+        CompositionLocalProvider(LocalBringIntoViewSpec provides ScrollOnlyWhenNeeded) {
+            // LEFT / RIGHT do nothing on a row: there's nothing beside it.
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .blockFocusExit(FocusDirection.Left, FocusDirection.Right),
+            ) {
+                itemsIndexed(state.rows, key = { _, row -> row.result.id }) { index, row ->
+                    LogTableRow(
+                        row = row,
+                        modifier = if (index == 0) Modifier.focusRequester(firstRowFocus) else Modifier,
+                    )
+                }
             }
         }
     }
@@ -137,3 +147,6 @@ private fun LogScreenEmptyPreview() {
         }
     }
 }
+
+/** The interface's default behaviour: scroll just enough to show the focused row. */
+private val ScrollOnlyWhenNeeded = object : BringIntoViewSpec {}

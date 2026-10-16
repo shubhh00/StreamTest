@@ -673,3 +673,14 @@ Android Gradle Plugin downloads the missing SDK platform (37) itself.
 
 - **`gradlew` must be executable in git** (mode `100755`), or Linux refuses to run it.
   Projects created on Windows sometimes lose that.
+
+### Gotchas from recording the demo
+
+- **TV lists keep the focused row ~30% down the screen.** On a TV, Compose's default
+  `BringIntoViewSpec` scrolls to a "pivot", so the Log table scrolled after three
+  presses and left half a row under the headings. Providing a plain
+  `object : BringIntoViewSpec {}` through `LocalBringIntoViewSpec` restores "scroll only
+  when needed". The API is still marked experimental, so it needs an opt-in.
+- **A pixel height isn't a quality name.** Tears of Steel's 480p track is 854×380 (a wide
+  film), so a saved "forced 380p" didn't match the picker's "480p". Forced heights are
+  now saved through the same `standardHeight()` the picker uses.

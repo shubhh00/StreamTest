@@ -14,6 +14,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.util.EventLogger
 import com.app.streamtest.BuildConfig
 import com.app.streamtest.Routes
+import com.app.streamtest.domain.stats.standardHeight
 import com.app.streamtest.domain.catalog.CatalogRepository
 import com.app.streamtest.domain.catalog.FoundStream
 import com.app.streamtest.domain.catalog.StreamType
@@ -241,7 +242,9 @@ class PlayerViewModel @Inject constructor(
             // Remembered for the saved result: a forced switch re-buffers, so results with
             // forced quality aren't directly comparable with Auto ones.
             everForcedQuality = true
-            lastForcedHeight = _state.value.qualities.firstOrNull { it.key == key }?.height
+            // Saved as the standard name ("480p" for 854×380), the same one the picker shows.
+            lastForcedHeight = _state.value.qualities.firstOrNull { it.key == key }
+                ?.let { standardHeight(it.width, it.height) }
         }
         // The player re-selects tracks right away and re-buffers from the current
         // position, so the new quality shows within a moment.
