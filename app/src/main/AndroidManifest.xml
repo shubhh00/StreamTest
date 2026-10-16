@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- "leanback" = the Android TV user interface. required="false" means the app
          is built for TV but can still be installed on phones (handy for testing). -->
@@ -27,9 +28,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.StreamTest">
 
+        <!-- sensorLandscape: the screens are designed for a landscape TV. TVs are always
+             landscape anyway; this keeps a phone used for testing sideways too (either way up).
+             Android 16 ignores it on tablets and large screens only, which is fine here. -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
+            tools:ignore="DiscouragedApi">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <!-- LAUNCHER = show the app in a phone's app drawer (for testing). -->

@@ -2,10 +2,10 @@ package com.app.streamtest.data.results
 
 import com.app.streamtest.domain.results.ResultsRepository
 import com.app.streamtest.domain.results.TestResult
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /** Saves and reads results in the Room database. */
 @Singleton

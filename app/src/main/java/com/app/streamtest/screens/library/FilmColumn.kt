@@ -1,7 +1,5 @@
 package com.app.streamtest.screens.library
 
-import com.app.streamtest.ui.components.blockFocusExit
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
@@ -18,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -35,8 +34,10 @@ import com.app.streamtest.domain.catalog.ExtraStream
 import com.app.streamtest.domain.catalog.Film
 import com.app.streamtest.domain.results.TestResult
 import com.app.streamtest.domain.stats.QualityLineModel
-import com.app.streamtest.ui.resultTextFor
 import com.app.streamtest.ui.components.StreamRow
+import com.app.streamtest.ui.components.blockFocusExit
+import com.app.streamtest.ui.lastTestFailed
+import com.app.streamtest.ui.resultTextFor
 import com.app.streamtest.ui.theme.DimTextColor
 import com.app.streamtest.ui.theme.FilmTitleStyle
 import com.app.streamtest.ui.theme.FocusCornerRadius
@@ -96,6 +97,7 @@ fun FilmColumn(
                 title = extra.title,
                 subtitle = extra.note,
                 result = resultTextFor(extra.stream.id, lastResults),
+                resultIsProblem = lastTestFailed(extra.stream.id, lastResults),
                 qualityLine = lastResultLines[extra.stream.id],
                 onClick = { onOpenPlayer(extra.stream.id) },
                 onFocused = { onExtraFocused(index) },

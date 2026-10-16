@@ -11,12 +11,12 @@ import com.app.streamtest.domain.stats.ResultsSummary
 import com.app.streamtest.domain.stats.buildQualityLine
 import com.app.streamtest.domain.stats.summarize
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** One table row. The film title is only shown on the first row of each film. */
 data class LogRow(

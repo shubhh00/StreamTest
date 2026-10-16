@@ -139,7 +139,11 @@ private fun LibraryContent(
             } ?: FocusRequester.Default,
         )
         Spacer(Modifier.height(12.dp))
-        CapabilityStrip(summary = state.deviceSummary, modifier = Modifier.padding(horizontal = 12.dp))
+        CapabilityStrip(
+            summary = state.deviceSummary,
+            playedUpToHeight = state.playedUpToHeight,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
         Spacer(Modifier.height(20.dp))
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
             FilmColumn(
@@ -199,7 +203,11 @@ private fun LibraryScreenPreview() {
             ExtraStream("Akamai live stream", "Live 1080p · no fixed end",
                 StreamVersion("live", StreamType.HLS, "https://example.com/live.m3u8")),
         ),
-        deviceSummary = DeviceSummary(canPlay = listOf("Widevine L1", "4K", "HEVC"), cantPlay = listOf("AV1")),
+        deviceSummary = DeviceSummary(
+            canPlay = listOf("Widevine L1", "4K", "HEVC"),
+            cantPlay = listOf("AV1"),
+            screen = "2160p screen · HDR10",
+        ),
     )
     StreamTestTheme {
         Surface {

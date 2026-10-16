@@ -10,11 +10,10 @@ import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime
-import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.drm.KeyRequestInfo
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
-import com.app.streamtest.domain.stats.Freeze
+import com.app.streamtest.domain.stats.PlaybackSession
 import com.app.streamtest.domain.stats.QualityChange
 import com.app.streamtest.domain.stats.buildQualityLine
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,29 +27,27 @@ import kotlinx.coroutines.flow.update
  * An AnalyticsListener is Media3's "tell me everything" listener: every load,
  * format change, dropped frame and DRM event is reported to it, on the main thread.
  *
- * Media3 marks AnalyticsListener and PlaybackStatsListener as @UnstableApi (their
- * shape may change between versions), so we opt in on purpose.
+ * The watch clock and freezes are kept by [PlaybackSession] (plain, unit-tested logic);
+ * this class only feeds it the player's events with the current time. One source for
+ * the freeze count, total and dots means they always agree, also when the user leaves
+ * in the middle of a freeze.
+ *
+ * Media3 marks AnalyticsListener as @UnstableApi (its shape may change between
+ * versions), so we opt in on purpose.
  */
 @OptIn(UnstableApi::class)
 class StatsCollector(private val player: ExoPlayer) : AnalyticsListener {
 
-    // PlaybackStatsListener is a ready-made Media3 listener that keeps counters for the
-    // whole session. We use it for freezes ("rebuffers"): times the video stopped to
-    // wait for data after it had started playing.
-    private val playbackStatsListener = PlaybackStatsListener(/* keepHistory= */ false, /* callback= */ null)
+    private val session = PlaybackSession()
 
     private val _stats = MutableStateFlow(LiveStats())
     val stats: StateFlow<LiveStats> = _stats.asStateFlow()
 
     // All timings use elapsedRealtime: a clock that never jumps (unlike the wall clock).
     private var prepareRealtimeMs = 0L
-    private var firstFrameRealtimeMs: Long? = null
-    private var freezeStartRealtimeMs: Long? = null
-    private var freezeStartPositionMs = 0L
 
     fun attach() {
         player.addAnalyticsListener(this)
-        player.addAnalyticsListener(playbackStatsListener)
     }
 
     /** Call right before player.prepare(): all start-up times are measured from here. */
@@ -58,7 +55,9 @@ class StatsCollector(private val player: ExoPlayer) : AnalyticsListener {
         prepareRealtimeMs = SystemClock.elapsedRealtime()
     }
 
-    private fun msSincePrepare(): Long = SystemClock.elapsedRealtime() - prepareRealtimeMs
+    private fun now(): Long = SystemClock.elapsedRealtime()
+
+    private fun msSincePrepare(): Long = now() - prepareRealtimeMs
 
     // A load finished: either the playlist/manifest, or a chunk of media.
     override fun onLoadCompleted(eventTime: EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
@@ -83,8 +82,8 @@ class StatsCollector(private val player: ExoPlayer) : AnalyticsListener {
     }
 
     override fun onRenderedFirstFrame(eventTime: EventTime, output: Any, renderTimeMs: Long) {
-        if (firstFrameRealtimeMs != null) return
-        firstFrameRealtimeMs = SystemClock.elapsedRealtime()
+        if (session.firstFrameShown) return
+        session.onFirstFrame(now())
         _stats.update { it.copy(milestones = it.milestones.copy(firstFrameMs = msSincePrepare())) }
     }
 
@@ -112,25 +111,33 @@ class StatsCollector(private val player: ExoPlayer) : AnalyticsListener {
         _stats.update { it.copy(droppedFrames = it.droppedFrames + droppedFrames) }
     }
 
-    // A freeze = going to BUFFERING after the first frame while the user wants to play.
-    // We note where and how long each one was, for the dots on the quality line.
+    // Buffering started or stopped. After the first frame, while the user wants to play,
+    // that's a freeze; PlaybackSession decides and measures it.
     override fun onPlaybackStateChanged(eventTime: EventTime, state: Int) {
-        val isFreezeStart = state == Player.STATE_BUFFERING && firstFrameRealtimeMs != null && player.playWhenReady
-        if (isFreezeStart) {
-            freezeStartRealtimeMs = SystemClock.elapsedRealtime()
-            freezeStartPositionMs = timelinePositionMs()
-            return
-        }
-        val startedAt = freezeStartRealtimeMs ?: return
-        if (state == Player.STATE_BUFFERING) return
-        freezeStartRealtimeMs = null
-        val freeze = Freeze(positionMs = freezeStartPositionMs, durationMs = SystemClock.elapsedRealtime() - startedAt)
-        _stats.update { it.copy(freezes = it.freezes + freeze) }
+        session.onBufferingChanged(state == Player.STATE_BUFFERING, timelinePositionMs(), now())
+    }
+
+    // playWhenReady changed: the user (or HOME, via the ViewModel) paused or resumed.
+    // Paused / background time doesn't count as watched time, and ends a freeze.
+    override fun onPlayWhenReadyChanged(eventTime: EventTime, playWhenReady: Boolean, reason: Int) {
+        session.onWantsToPlayChanged(playWhenReady, timelinePositionMs(), now())
+    }
+
+    /** Time actually watched so far (paused / background time left out). */
+    fun watchedMs(): Long = session.watchedMs(now())
+
+    /**
+     * The test is over (BACK): close a freeze that's still going and stop the clock, then
+     * refresh the numbers one last time, so the saved result is complete.
+     */
+    fun finish() {
+        session.finish(now())
+        onTick()
     }
 
     /** Called every 500 ms by the ViewModel for values that change all the time. */
     fun onTick() {
-        val playbackStats = playbackStatsListener.playbackStats
+        val freezes = session.freezes(now()) // includes a freeze still going, measured up to now
         val isLive = player.isCurrentMediaItemLive
         val positionMs = timelinePositionMs()
         // A live stream has no end, so its line covers "time watched so far".
@@ -140,22 +147,21 @@ class StatsCollector(private val player: ExoPlayer) : AnalyticsListener {
         _stats.update {
             it.copy(
                 bufferedAheadMs = player.totalBufferedDuration,
-                freezeCount = playbackStats?.totalRebufferCount ?: 0,
-                freezeTotalMs = playbackStats?.totalRebufferTimeMs ?: 0,
+                freezes = freezes,
+                freezeCount = freezes.size,
+                freezeTotalMs = freezes.sumOf { freeze -> freeze.durationMs },
                 positionMs = positionMs,
                 durationMs = durationMs,
                 isLive = isLive,
-                qualityLine = buildQualityLine(it.qualityChanges, it.freezes, positionMs, lineLengthMs),
+                qualityLine = buildQualityLine(it.qualityChanges, freezes, positionMs, lineLengthMs),
                 playheadFraction = if (lineLengthMs > 0) (positionMs.toFloat() / lineLengthMs).coerceIn(0f, 1f) else 0f,
             )
         }
     }
 
     // Where we are on the quality line. For normal videos that's the playback position.
-    // A live stream's position is inside a moving window, so we use time watched instead.
-    private fun timelinePositionMs(): Long {
-        if (!player.isCurrentMediaItemLive) return player.currentPosition
-        val firstFrameAt = firstFrameRealtimeMs ?: return 0
-        return SystemClock.elapsedRealtime() - firstFrameAt
-    }
+    // A live stream's position is inside a moving window, so we use time watched instead
+    // (which leaves out paused and background time).
+    private fun timelinePositionMs(): Long =
+        if (player.isCurrentMediaItemLive) session.watchedMs(now()) else player.currentPosition
 }

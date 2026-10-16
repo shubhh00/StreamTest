@@ -46,8 +46,15 @@ fun ThisTvSection(details: DeviceDetails) {
 }
 
 @Composable
-fun DecodersSection(groups: List<DecoderGroup>) {
+fun DecodersSection(groups: List<DecoderGroup>, decodes4k: Boolean) {
     Column {
+        // Decoding is separate from the screen: a 4K decoder can feed a 1080p screen.
+        Text(
+            text = if (decodes4k) "Can decode 4K (3840×2160)" else "Can't decode 4K (3840×2160)",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (decodes4k) TextColor else ProblemColor,
+            modifier = Modifier.padding(bottom = 10.dp),
+        )
         groups.forEach { group ->
             val hardware = when (group.hardwareCount) {
                 null -> ""

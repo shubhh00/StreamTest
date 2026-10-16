@@ -39,6 +39,7 @@ import com.app.streamtest.domain.stats.QualitySegment
 import com.app.streamtest.domain.stats.StartMilestones
 import com.app.streamtest.player.LiveStats
 import com.app.streamtest.ui.theme.BackgroundColor
+import com.app.streamtest.ui.theme.DimTextColor
 import com.app.streamtest.ui.theme.ProblemColor
 import com.app.streamtest.ui.theme.SafeAreaHorizontal
 import com.app.streamtest.ui.theme.SafeAreaVertical
@@ -202,6 +203,7 @@ private fun ErrorMessage(error: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(text = "Can't play this stream", style = MaterialTheme.typography.titleLarge, color = ProblemColor)
         Text(text = error, color = SecondaryTextColor)
+        Text(text = "Press BACK to save this result and go back.", style = MaterialTheme.typography.bodySmall, color = DimTextColor)
     }
 }
 

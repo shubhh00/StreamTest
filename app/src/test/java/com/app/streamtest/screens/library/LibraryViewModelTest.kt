@@ -54,9 +54,8 @@ class LibraryViewModelTest {
         coEvery { catalogRepository.getCatalog() } returns Catalog(films = listOf(tears), extras = listOf(live))
         coEvery { deviceInfoRepository.getCapabilities() } returns DeviceCapabilities(
             widevineLevel = "L1",
-            supports4k = true,
-            supportsHdr10 = false,
-            supportsDolbyVision = false,
+            decodes4k = true,
+            hasDolbyVisionDecoder = false,
             hasHevcDecoder = true,
             hasAv1Decoder = false,
         )
@@ -77,7 +76,7 @@ class LibraryViewModelTest {
         assertEquals(listOf(tears), state.films)
         assertEquals(listOf(live), state.extras)
         assertEquals(listOf("Widevine L1", "4K", "HEVC"), state.deviceSummary?.canPlay)
-        assertEquals(listOf("HDR10", "AV1", "Dolby Vision"), state.deviceSummary?.cantPlay)
+        assertEquals(listOf("AV1", "Dolby Vision"), state.deviceSummary?.cantPlay)
     }
 
     @Test

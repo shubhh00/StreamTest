@@ -1,13 +1,12 @@
 package com.app.streamtest.screens.library
 
-import com.app.streamtest.ui.components.blockFocusExit
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -20,11 +19,13 @@ import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.catalog.StreamVersion
 import com.app.streamtest.domain.results.TestResult
 import com.app.streamtest.domain.stats.QualityLineModel
-import com.app.streamtest.ui.defaultSubtitle
-import com.app.streamtest.ui.label
-import com.app.streamtest.ui.resultTextFor
 import com.app.streamtest.ui.components.StreamRow
 import com.app.streamtest.ui.components.UnavailableStreamRow
+import com.app.streamtest.ui.components.blockFocusExit
+import com.app.streamtest.ui.defaultSubtitle
+import com.app.streamtest.ui.label
+import com.app.streamtest.ui.lastTestFailed
+import com.app.streamtest.ui.resultTextFor
 import com.app.streamtest.ui.theme.DimTextColor
 import com.app.streamtest.ui.theme.SecondaryTextColor
 import java.net.URI
@@ -58,6 +59,7 @@ fun FilmDetailPanel(
                     title = type.label(),
                     subtitle = version.subtitle ?: type.defaultSubtitle(),
                     result = resultTextFor(version.id, lastResults),
+                    resultIsProblem = lastTestFailed(version.id, lastResults),
                     qualityLine = lastResultLines[version.id],
                     onClick = { onOpenPlayer(version.id) },
                     modifier = Modifier

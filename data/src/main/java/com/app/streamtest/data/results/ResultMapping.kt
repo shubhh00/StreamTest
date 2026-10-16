@@ -2,6 +2,8 @@ package com.app.streamtest.data.results
 
 import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.results.PlaybackTimeline
+import com.app.streamtest.domain.results.QualityMode
+import com.app.streamtest.domain.results.TestOutcome
 import com.app.streamtest.domain.results.TestResult
 import com.app.streamtest.domain.stats.Freeze
 import com.app.streamtest.domain.stats.QualityChange
@@ -42,11 +44,16 @@ fun TestResult.toEntity(): TestResultEntity = TestResultEntity(
     filmTitle = filmTitle,
     versionType = versionType.name,
     startedAtMillis = startedAtMillis,
+    outcome = outcome.name,
+    errorCode = errorCode,
     timeToFirstFrameMs = timeToFirstFrameMs,
     freezeCount = freezeCount,
     freezeTotalMs = freezeTotalMs,
     droppedFrames = droppedFrames,
     timeAtHdOrBetterPercent = timeAtHdOrBetterPercent,
+    qualityMode = qualityMode.name,
+    forcedHeight = forcedHeight,
+    testDurationMs = testDurationMs,
     timelineJson = json.encodeToString(
         TimelineJson(
             qualityChanges = timeline.qualityChanges.map { QualityChangeJson(it.positionMs, it.width, it.height) },
@@ -80,6 +87,11 @@ fun TestResultEntity.toTestResult(): TestResult {
         freezeTotalMs = freezeTotalMs,
         droppedFrames = droppedFrames,
         timeAtHdOrBetterPercent = timeAtHdOrBetterPercent,
+        outcome = TestOutcome.entries.firstOrNull { it.name == outcome } ?: TestOutcome.PLAYED,
+        errorCode = errorCode,
+        qualityMode = QualityMode.entries.firstOrNull { it.name == qualityMode } ?: QualityMode.AUTO,
+        forcedHeight = forcedHeight,
+        testDurationMs = testDurationMs,
         timeline = PlaybackTimeline(
             qualityChanges = timeline.qualityChanges.map { QualityChange(it.positionMs, it.width, it.height) },
             freezes = timeline.freezes.map { Freeze(it.positionMs, it.durationMs) },

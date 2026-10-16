@@ -5,10 +5,10 @@ import androidx.room.RoomDatabase
 
 /**
  * The app's SQLite database. Room generates the implementation.
- * exportSchema = false: we don't keep schema JSON files, since there's only one
- * version so far. When the table changes, bump the version and add a migration.
+ * When the table changes, bump the version and add a Migration (see Migrations.kt).
+ * exportSchema = false: we don't keep schema JSON files; the migration SQL is the record.
  */
-@Database(entities = [TestResultEntity::class], version = 1, exportSchema = false)
+@Database(entities = [TestResultEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun testResultDao(): TestResultDao
 }

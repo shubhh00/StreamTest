@@ -19,8 +19,11 @@ import com.app.streamtest.domain.catalog.FoundStream
 import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.catalog.findStream
 import com.app.streamtest.domain.results.PlaybackTimeline
+import com.app.streamtest.domain.results.QualityMode
 import com.app.streamtest.domain.results.ResultsRepository
+import com.app.streamtest.domain.results.TestOutcome
 import com.app.streamtest.domain.results.TestResult
+import com.app.streamtest.domain.results.saveSafely
 import com.app.streamtest.domain.stats.timeAtHdOrBetterPercent
 import com.app.streamtest.player.LiveStats
 import com.app.streamtest.player.PlayerFactory
@@ -31,13 +34,13 @@ import com.app.streamtest.player.videoQualityOptions
 import com.app.streamtest.ui.label
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class PlayerState(
     /** e.g. "Tears of Steel — HLS". */
@@ -86,12 +89,16 @@ class PlayerViewModel @Inject constructor(
     private var playingStream: FoundStream? = null
     private var startedAtMillis = 0L
     private var isClosing = false
+    private var playbackErrorCode: String? = null
+    private var everForcedQuality = false
+    private var lastForcedHeight: Int? = null
 
     init {
         statsCollector.attach()
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 // errorCodeName is a readable name such as "ERROR_CODE_IO_BAD_HTTP_STATUS".
+                playbackErrorCode = error.errorCodeName
                 _state.update { it.copy(errorMessage = error.errorCodeName) }
             }
 
@@ -142,24 +149,36 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * BACK on the Player: save the test (if the video ever started), then [close] the screen.
-     * The save runs before closing, so the Library already shows the new result.
+     * BACK on the Player: finish the measurements, save the test, then [close] the screen.
+     * The save runs before closing, so the Library already shows the new result. If the
+     * save fails (e.g. full disk) we still close: losing one result beats a crash.
      */
     fun onExit(close: () -> Unit) {
         if (isClosing) return // a second BACK press while saving
         isClosing = true
+        statsCollector.finish() // closes a freeze that's still going
         viewModelScope.launch {
-            buildResult()?.let { resultsRepository.save(it) }
+            buildResult()?.let { result -> resultsRepository.saveSafely(result) }
             close()
         }
     }
 
-    /** The test as it stands now, or null if the first frame never showed. */
+    /**
+     * The test as it stands now. Saved when the video started, and also when it failed,
+     * since "it never started" is a result too. Null only if the user left before the
+     * first frame with nothing gone wrong (nothing to report).
+     */
     private fun buildResult(): TestResult? {
         val stream = playingStream ?: return null
-        statsCollector.onTick() // freshest numbers
         val stats = stats.value
-        val timeToFirstFrameMs = stats.milestones.firstFrameMs ?: return null
+        val timeToFirstFrameMs = stats.milestones.firstFrameMs
+        val errorCode = playbackErrorCode
+        if (timeToFirstFrameMs == null && errorCode == null) return null
+        val outcome = when {
+            errorCode == null -> TestOutcome.PLAYED
+            timeToFirstFrameMs == null -> TestOutcome.FAILED_TO_START
+            else -> TestOutcome.FAILED_WHILE_PLAYING
+        }
         return TestResult(
             streamId = stream.stream.id,
             filmTitle = stream.title,
@@ -177,6 +196,11 @@ class PlayerViewModel @Inject constructor(
                 lengthMs = stats.durationMs ?: stats.positionMs,
             ),
             milestones = stats.milestones,
+            outcome = outcome,
+            errorCode = errorCode,
+            qualityMode = if (everForcedQuality) QualityMode.FORCED else QualityMode.AUTO,
+            forcedHeight = lastForcedHeight,
+            testDurationMs = statsCollector.watchedMs(),
         )
     }
 
@@ -214,6 +238,10 @@ class PlayerViewModel @Inject constructor(
         } else {
             val override = player.currentTracks.overrideFor(key) ?: return
             builder.setOverrideForType(override)
+            // Remembered for the saved result: a forced switch re-buffers, so results with
+            // forced quality aren't directly comparable with Auto ones.
+            everForcedQuality = true
+            lastForcedHeight = _state.value.qualities.firstOrNull { it.key == key }?.height
         }
         // The player re-selects tracks right away and re-buffers from the current
         // position, so the new quality shows within a moment.

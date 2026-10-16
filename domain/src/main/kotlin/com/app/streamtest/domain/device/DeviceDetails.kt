@@ -12,6 +12,8 @@ data class DeviceDetails(
     /** Highest HDCP (copy protection on the HDMI link) the TV supports, or null if unknown. */
     val maxHdcpLevel: String?,
     val videoDecoders: List<DecoderInfo>,
+    /** A video decoder accepts 3840×2160 frames (H.264 or HEVC). */
+    val decodes4k: Boolean = false,
     /** e.g. "1920×1080 @ 60 Hz". */
     val displayModes: List<String>,
     /** e.g. "HDR10", "HLG". Empty if the screen has no HDR. */

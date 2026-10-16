@@ -2,6 +2,7 @@ package com.app.streamtest.domain.stats
 
 import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.results.PlaybackTimeline
+import com.app.streamtest.domain.results.TestOutcome
 import com.app.streamtest.domain.results.TestResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -54,10 +55,49 @@ class StatsMathTest {
 
     @Test
     fun `summary of no tests`() {
-        assertEquals(ResultsSummary(null, 0.0, 0), summarize(emptyList()))
+        assertEquals(ResultsSummary(null, 0.0, 0, 0), summarize(emptyList()))
     }
 
-    private fun result(timeToFirstFrameMs: Long, freezeCount: Int, hdPercent: Int) = TestResult(
+    @Test
+    fun `HD share is weighted by watch time`() {
+        // 9 minutes at 100% HD and 1 minute at 0%: 90% of the watch time was HD, not 50%.
+        val summary = summarize(
+            listOf(
+                result(timeToFirstFrameMs = 1_000, freezeCount = 0, hdPercent = 100, watchedMs = 540_000),
+                result(timeToFirstFrameMs = 1_000, freezeCount = 0, hdPercent = 0, watchedMs = 60_000),
+            ),
+        )
+        assertEquals(90, summary.hdOrBetterPercent)
+    }
+
+    @Test
+    fun `tests that never started are counted, not averaged in`() {
+        val summary = summarize(
+            listOf(
+                result(timeToFirstFrameMs = 1_000, freezeCount = 2, hdPercent = 100, watchedMs = 10_000),
+                result(timeToFirstFrameMs = null, freezeCount = 0, hdPercent = 0, watchedMs = 0, outcome = TestOutcome.FAILED_TO_START),
+            ),
+        )
+        assertEquals(1_000L, summary.medianTimeToStartMs)
+        assertEquals(2.0, summary.freezesPerTest, 0.001)
+        assertEquals(100, summary.hdOrBetterPercent)
+        assertEquals(1, summary.failedToStartCount)
+    }
+
+    @Test
+    fun `only failures gives no median`() {
+        val summary = summarize(listOf(result(null, 0, 0, outcome = TestOutcome.FAILED_TO_START)))
+        assertNull(summary.medianTimeToStartMs)
+        assertEquals(1, summary.failedToStartCount)
+    }
+
+    private fun result(
+        timeToFirstFrameMs: Long?,
+        freezeCount: Int,
+        hdPercent: Int,
+        watchedMs: Long = 0,
+        outcome: TestOutcome = TestOutcome.PLAYED,
+    ) = TestResult(
         streamId = "s",
         filmTitle = "Film",
         versionType = StreamType.HLS,
@@ -69,5 +109,7 @@ class StatsMathTest {
         timeAtHdOrBetterPercent = hdPercent,
         timeline = PlaybackTimeline(emptyList(), emptyList(), 0, 0),
         milestones = StartMilestones(),
+        outcome = outcome,
+        testDurationMs = watchedMs,
     )
 }

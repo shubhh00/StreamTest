@@ -35,9 +35,8 @@ class LogViewModelTest {
         coEvery { deviceInfoRepository.getCapabilities() } returns DeviceCapabilities(
             deviceName = "Google TV Streamer",
             widevineLevel = "L1",
-            supports4k = true,
-            supportsHdr10 = true,
-            supportsDolbyVision = true,
+            decodes4k = true,
+            hasDolbyVisionDecoder = true,
             hasHevcDecoder = true,
             hasAv1Decoder = true,
         )

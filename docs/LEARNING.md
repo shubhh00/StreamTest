@@ -570,3 +570,76 @@ on the header tabs does, so it was used instead.
 **Testing focus without screenshots.** `adb exec-out uiautomator dump /dev/tty` prints
 the screen's accessibility tree. The node marked `focused="true"` names the focused
 item, so a script can press keys and check where focus went after each press.
+
+---
+
+## Measurement fixes after a review
+
+### What changed
+
+- **`PlaybackSession`** (in `:domain`, unit-tested) now owns the watch clock and the
+  freezes. `StatsCollector` just feeds it player events with the current time.
+  - **Watched time leaves out paused and background time.** Before, a live stream's
+    timeline kept running while HOME had it paused.
+  - **A freeze still going when you press BACK is closed and saved.** Before, the
+    count said 1 but the line had no dot and no duration.
+  - **The count, total and dots come from one place.** That replaced
+    `PlaybackStatsListener`, which can't be finalized or tested.
+- **Failed starts are saved**, with an outcome (`PLAYED`, `FAILED_TO_START`,
+  `FAILED_WHILE_PLAYING`) and Media3's error code. Rows say "Didn't start · io network
+  connection timeout", and the Log summary counts them.
+- **Results remember** whether a quality was forced (and which) and how long the test
+  was watched.
+- **A saving error can't crash BACK** (`saveSafely`).
+- **"Time in HD" is weighted by watch time**, so a 10-minute test counts more than a
+  10-second one.
+- **"Can decode 4K" is separate from "4K screen".** The Library strip shows the screen
+  on its own, plus "played up to …p" from real results.
+- **Database version 2,** with a migration that keeps existing results.
+- **New test-card icon and TV banner,** made from our font's letters as vector outlines.
+- 51 unit tests, up from 37.
+
+### New concepts
+
+**Injecting time to make timing testable.** `PlaybackSession` never reads a clock;
+every call passes `nowMs`. A test can then say "first frame at 0, HOME at 10 s, back
+at 70 s" and check that 15 s were watched at 75 s, with no device and no waiting.
+
+**Room migrations.** Changing a table means bumping `@Database(version = …)` and
+giving Room a `Migration(old, new)` with the SQL to upgrade. SQLite can't make a NOT
+NULL column nullable in place, so `MIGRATION_1_2` creates a new table, copies the rows
+across with defaults for the new columns, drops the old table and renames the new one.
+It was checked by installing the new app over the old database: all saved tests were
+still there.
+
+**Saving without crashing.** `saveSafely()` catches exceptions and returns `false`, but
+re-throws `CancellationException`. In coroutines, cancellation is how "stop this work"
+is signalled, so swallowing it would be a bug.
+
+**Duration-weighted averages.** Averaging percentages per test lets a 5-second test
+outweigh a 10-minute one. Weighting each test's share by its watch time gives the share
+of *all watch time*.
+
+**Reported vs tested.** `MediaCodecInfo.VideoCapabilities.isSizeSupported(3840, 2160)`
+says a decoder *claims* 4K. "Played up to 2160p" in the strip comes from a test that
+actually decoded it.
+
+**Vector text without fonts.** Vector drawables can't use fonts, so the icon's
+letters were converted to outline path data (Windows' GDI+ `GraphicsPath.AddString`).
+That gives the real Schibsted Grotesk shapes, sharp at every size.
+
+### Gotchas
+
+- **Forcing a test failure on the emulator.** Airplane mode didn't cut its network,
+  and `ping` fails even when it's online. Throttling with `adb emu network speed gsm`
+  made the player time out before the first frame
+  (`ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT`, after about 75 s).
+- **TV banners are 320×180 px at xhdpi, which is 160×90 dp.** Lint caught the banner
+  declared as 320×180 dp.
+- **A phone reports its screen as portrait** (1080×2340), so "largest mode height"
+  read "2340p screen". A resolution like "1080p" means the short side, so the code
+  now uses `minOf(width, height)`.
+- **The app is locked to landscape** (`sensorLandscape` in the manifest). In portrait
+  on a phone, the TV layout overflowed and the film list could be dragged by touch.
+  TVs are always landscape, so this only affects phones used for testing. Android 16
+  ignores fixed orientations on large screens only, not on phones.

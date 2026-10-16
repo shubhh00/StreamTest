@@ -20,8 +20,8 @@ import com.app.streamtest.ui.theme.DimTextColor
 import com.app.streamtest.ui.theme.ProblemColor
 import com.app.streamtest.ui.theme.SecondaryTextColor
 import com.app.streamtest.ui.theme.StatNumberStyle
-import com.app.streamtest.ui.theme.tabularDigits
 import com.app.streamtest.ui.theme.TextColor
+import com.app.streamtest.ui.theme.tabularDigits
 
 /** Bottom panel: title + time, the six big numbers, and the quality line. */
 @Composable

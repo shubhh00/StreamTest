@@ -18,14 +18,17 @@ import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import com.app.streamtest.domain.results.QualityMode
+import com.app.streamtest.domain.results.TestOutcome
 import com.app.streamtest.ui.components.QualityLine
 import com.app.streamtest.ui.label
+import com.app.streamtest.ui.shortErrorName
 import com.app.streamtest.ui.theme.FocusCornerRadius
 import com.app.streamtest.ui.theme.ProblemColor
 import com.app.streamtest.ui.theme.RowFocusColor
 import com.app.streamtest.ui.theme.SecondaryTextColor
-import com.app.streamtest.ui.theme.tabularDigits
 import com.app.streamtest.ui.theme.TextColor
+import com.app.streamtest.ui.theme.tabularDigits
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -78,8 +81,9 @@ fun LogTableRow(row: LogRow, modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Cell(if (row.showFilmTitle) result.filmTitle else "", FilmWidth, MaterialTheme.typography.bodyMedium, TextColor)
-            Cell(result.versionType.label(), VersionWidth, MaterialTheme.typography.bodyMedium, SecondaryTextColor)
-            Cell("${result.timeToFirstFrameMs} ms", ToStartWidth, numberStyle, TextColor)
+            val version = if (result.qualityMode == QualityMode.FORCED) "${result.versionType.label()} · forced" else result.versionType.label()
+            Cell(version, VersionWidth, MaterialTheme.typography.bodyMedium, SecondaryTextColor)
+            Cell(result.timeToFirstFrameMs?.let { "$it ms" } ?: "—", ToStartWidth, numberStyle, TextColor)
             // Color only appears on problems.
             Cell(
                 text = result.freezeCount.toString(),
@@ -87,8 +91,20 @@ fun LogTableRow(row: LogRow, modifier: Modifier = Modifier) {
                 style = numberStyle,
                 color = if (result.freezeCount > 0) ProblemColor else TextColor,
             )
-            // Same drawing as the Player's quality line, just 3dp tall and without a playhead.
-            QualityLine(model = row.qualityLine, thickness = 3.dp, modifier = Modifier.weight(1f))
+            if (result.outcome == TestOutcome.FAILED_TO_START) {
+                // Nothing played, so there's no line: say why instead.
+                Text(
+                    text = "Didn't start · ${shortErrorName(result.errorCode)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ProblemColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                // Same drawing as the Player's quality line, just 3dp tall and without a playhead.
+                QualityLine(model = row.qualityLine, thickness = 3.dp, modifier = Modifier.weight(1f))
+            }
             Cell(
                 text = formatWhen(result.startedAtMillis),
                 width = WhenWidth,

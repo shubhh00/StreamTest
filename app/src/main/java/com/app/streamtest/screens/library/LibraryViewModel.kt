@@ -12,13 +12,14 @@ import com.app.streamtest.domain.results.ResultsRepository
 import com.app.streamtest.domain.results.TestResult
 import com.app.streamtest.domain.stats.QualityLineModel
 import com.app.streamtest.domain.stats.buildQualityLine
+import com.app.streamtest.domain.stats.standardHeight
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** Which item in the left column is selected; the right column shows its details. */
 sealed interface LibrarySelection {
@@ -38,6 +39,8 @@ data class LibraryState(
     val lastResults: Map<String, TestResult> = emptyMap(),
     /** The quality line of each of those results, ready to draw. */
     val lastResultLines: Map<String, QualityLineModel> = emptyMap(),
+    /** Sharpest quality (e.g. 2160) actually played in those tests: tested, not just reported. */
+    val playedUpToHeight: Int? = null,
 )
 
 @HiltViewModel
@@ -67,7 +70,10 @@ class LibraryViewModel @Inject constructor(
                     val timeline = result.timeline
                     buildQualityLine(timeline.qualityChanges, timeline.freezes, timeline.playedUntilMs, timeline.lengthMs)
                 }
-                _state.update { it.copy(lastResults = latest, lastResultLines = lines) }
+                val playedUpTo = latest.values
+                    .flatMap { result -> result.timeline.qualityChanges }
+                    .maxOfOrNull { change -> standardHeight(change.width, change.height) }
+                _state.update { it.copy(lastResults = latest, lastResultLines = lines, playedUpToHeight = playedUpTo) }
             }
         }
     }

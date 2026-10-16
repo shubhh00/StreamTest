@@ -6,12 +6,12 @@ import com.app.streamtest.domain.device.DeviceDetails
 import com.app.streamtest.domain.device.DeviceInfoRepository
 import com.app.streamtest.domain.results.ResultsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** The sections in the left column of Settings. */
 enum class SettingsSection(val title: String) {

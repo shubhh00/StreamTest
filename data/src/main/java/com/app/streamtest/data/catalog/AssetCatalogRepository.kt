@@ -4,10 +4,10 @@ import android.content.Context
 import com.app.streamtest.domain.catalog.Catalog
 import com.app.streamtest.domain.catalog.CatalogRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Reads the catalog from assets/streams.json, which is bundled inside the APK. */
 @Singleton

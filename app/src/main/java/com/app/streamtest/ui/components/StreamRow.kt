@@ -16,6 +16,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.app.streamtest.domain.stats.QualityLineModel
 import com.app.streamtest.ui.theme.DimTextColor
+import com.app.streamtest.ui.theme.ProblemColor
 import com.app.streamtest.ui.theme.tabularDigits
 
 /**
@@ -32,6 +33,8 @@ fun StreamRow(
     modifier: Modifier = Modifier,
     onFocused: () -> Unit = {},
     qualityLine: QualityLineModel? = null,
+    /** Show the result in the problem color (e.g. the last test failed). */
+    resultIsProblem: Boolean = false,
 ) {
     FocusFillSurface(
         onClick = onClick,
@@ -55,7 +58,12 @@ fun StreamRow(
             }
             Spacer(Modifier.width(16.dp))
             Column(horizontalAlignment = Alignment.End) {
-                Text(text = tabularDigits(result), style = MaterialTheme.typography.bodySmall, color = secondaryTextColor(focused))
+                Text(
+                    text = tabularDigits(result),
+                    style = MaterialTheme.typography.bodySmall,
+                    // Color only appears on problems; on the off-white focus fill keep it readable.
+                    color = if (resultIsProblem && !focused) ProblemColor else secondaryTextColor(focused),
+                )
                 if (qualityLine != null) {
                     QualityLine(
                         model = qualityLine,

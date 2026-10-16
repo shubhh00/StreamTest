@@ -1,8 +1,5 @@
 package com.app.streamtest.screens.settings
 
-import com.app.streamtest.ui.components.blockFocusExit
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +13,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.tooling.preview.Devices
@@ -30,6 +29,7 @@ import androidx.tv.material3.Text
 import com.app.streamtest.ui.components.AppHeader
 import com.app.streamtest.ui.components.FocusFillSurface
 import com.app.streamtest.ui.components.HeaderTab
+import com.app.streamtest.ui.components.blockFocusExit
 import com.app.streamtest.ui.theme.SafeAreaHorizontal
 import com.app.streamtest.ui.theme.SafeAreaVertical
 import com.app.streamtest.ui.theme.SecondaryTextColor
@@ -126,7 +126,7 @@ private fun SectionContent(
     val details = state.details
     when (state.section) {
         SettingsSection.THIS_TV -> if (details != null) ThisTvSection(details) else Loading()
-        SettingsSection.DECODERS -> if (details != null) DecodersSection(state.decoderGroups) else Loading()
+        SettingsSection.DECODERS -> if (details != null) DecodersSection(state.decoderGroups, details.decodes4k) else Loading()
         SettingsSection.DISPLAY -> if (details != null) DisplaySection(details) else Loading()
         SettingsSection.RESULTS -> ResultsSection(state.savedCount, state.clearStep, onClearPressed, resultsSectionFocus)
         SettingsSection.ABOUT -> AboutSection()

@@ -1,7 +1,5 @@
 package com.app.streamtest.screens.log
 
-import com.app.streamtest.ui.components.blockFocusExit
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.tooling.preview.Devices
@@ -30,6 +29,7 @@ import androidx.tv.material3.Text
 import com.app.streamtest.domain.stats.ResultsSummary
 import com.app.streamtest.ui.components.AppHeader
 import com.app.streamtest.ui.components.HeaderTab
+import com.app.streamtest.ui.components.blockFocusExit
 import com.app.streamtest.ui.theme.LineColor
 import com.app.streamtest.ui.theme.SafeAreaHorizontal
 import com.app.streamtest.ui.theme.SafeAreaVertical
@@ -116,12 +116,16 @@ private fun subtitle(state: LogState): String {
     return if (state.deviceName.isBlank()) tests else "${state.deviceName} · $tests"
 }
 
-/** "Median time to start 1640 ms · 0.4 freezes per test · 82% of time in HD or better" */
+/**
+ * "Median time to start 1640 ms · 0.4 freezes per test · 82% of watch time in HD or better
+ * · 1 didn't start". HD is weighted by watch time, so long tests count more than short ones.
+ */
 private fun summaryLine(summary: ResultsSummary): String {
     val median = summary.medianTimeToStartMs?.let { "$it ms" } ?: "—"
     val freezes = String.format(Locale.US, "%.1f", summary.freezesPerTest)
-    return "Median time to start $median  ·  $freezes freezes per test  ·  " +
-        "${summary.hdOrBetterPercent}% of time in HD or better"
+    val line = "Median time to start $median  ·  $freezes freezes per test  ·  " +
+        "${summary.hdOrBetterPercent}% of watch time in HD or better"
+    return if (summary.failedToStartCount > 0) "$line  ·  ${summary.failedToStartCount} didn't start" else line
 }
 
 @Preview(device = Devices.TV_1080p)

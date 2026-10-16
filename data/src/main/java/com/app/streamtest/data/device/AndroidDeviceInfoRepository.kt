@@ -2,6 +2,7 @@ package com.app.streamtest.data.device
 
 import android.content.Context
 import android.hardware.display.DisplayManager
+import android.media.MediaCodecInfo
 import android.media.MediaCodecList
 import android.media.MediaDrm
 import android.os.Build
@@ -13,11 +14,11 @@ import com.app.streamtest.domain.device.DeviceCapabilities
 import com.app.streamtest.domain.device.DeviceDetails
 import com.app.streamtest.domain.device.DeviceInfoRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Asks Android what this TV can decode and display. Read once, then cached. */
 @Singleton
@@ -42,6 +43,7 @@ class AndroidDeviceInfoRepository @Inject constructor(
             widevineVersion = widevine["version"],
             maxHdcpLevel = widevine["maxHdcpLevel"],
             videoDecoders = videoDecoders(),
+            decodes4k = decodes4k(),
             // Display.Mode = one resolution + refresh rate the screen can switch to.
             displayModes = display?.supportedModes
                 ?.map { "${it.physicalWidth}×${it.physicalHeight} @ ${it.refreshRate.roundToInt()} Hz" }
@@ -51,21 +53,44 @@ class AndroidDeviceInfoRepository @Inject constructor(
         )
     }
 
+    // Decoding and the screen are separate questions: the decoder fields say what the
+    // device can turn into pictures, the screen fields say what the display can show.
     private fun readCapabilities(): DeviceCapabilities {
         val display = defaultDisplay()
-        val hdrTypes = if (display != null) supportedHdrTypes(display) else IntArray(0)
         val decoders = videoDecoders().map { it.mimeType }.toSet()
         return DeviceCapabilities(
             deviceName = deviceName(),
             widevineLevel = readWidevineProperties("securityLevel")["securityLevel"],
-            supports4k = display?.supportedModes?.any { it.physicalWidth >= 3840 && it.physicalHeight >= 2160 } ?: false,
-            supportsHdr10 = Display.HdrCapabilities.HDR_TYPE_HDR10 in hdrTypes,
-            supportsDolbyVision = MimeTypes.VIDEO_DOLBY_VISION in decoders &&
-                Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION in hdrTypes,
+            decodes4k = decodes4k(),
             hasHevcDecoder = MimeTypes.VIDEO_H265 in decoders,
             hasAv1Decoder = MimeTypes.VIDEO_AV1 in decoders,
+            hasDolbyVisionDecoder = MimeTypes.VIDEO_DOLBY_VISION in decoders,
+            // The short side: "1080p" means 1080 lines in landscape. A phone reports its
+            // mode as portrait (1080×2340), so the height alone would read "2340p".
+            screenMaxHeight = display?.supportedModes?.maxOfOrNull { minOf(it.physicalWidth, it.physicalHeight) } ?: 0,
+            screenHdrTypes = (display?.let { supportedHdrTypes(it) } ?: IntArray(0)).map { hdrTypeName(it) },
         )
     }
+
+    // Each decoder reports the frame sizes it accepts (VideoCapabilities). "Decodes 4K"
+    // means some H.264 or HEVC decoder accepts 3840×2160, whatever the screen is.
+    private fun decodes4k(): Boolean =
+        MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+            .filter { !it.isEncoder }
+            .any { info ->
+                info.supportedTypes.any { type ->
+                    val isAvcOrHevc = type.equals(MimeTypes.VIDEO_H264, ignoreCase = true) ||
+                        type.equals(MimeTypes.VIDEO_H265, ignoreCase = true)
+                    isAvcOrHevc && acceptsSize(info, type, 3840, 2160)
+                }
+            }
+
+    private fun acceptsSize(info: MediaCodecInfo, type: String, width: Int, height: Int): Boolean =
+        try {
+            info.getCapabilitiesForType(type).videoCapabilities?.isSizeSupported(width, height) == true
+        } catch (e: IllegalArgumentException) {
+            false // the codec doesn't really support this type after all
+        }
 
     private fun defaultDisplay(): Display? =
         context.getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)
