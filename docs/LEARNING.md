@@ -431,3 +431,142 @@ modules that depend on `:domain`.
 - **Results are only saved through BACK.** Pressing HOME, or the app being killed,
   saves nothing. That's fine for v1, and the spec asks for exactly this.
 - **A forced quality switch is saved as a freeze too** (see Milestone 5).
+
+---
+
+## Polish pass (after Milestone 6)
+
+### What changed
+
+- **Numbers:** tabular widths now apply to the *digits only* (`tabularDigits()`
+  builds an `AnnotatedString`), so "1.3 Mbps" no longer looks like "1 . 3 Mbps".
+- **Player:** a quiet "Starting…" message with the step being waited on (playlist,
+  DRM license, first video) until the first frame. The bottom stats panel is
+  shorter, so more of the picture shows.
+- **App icon:** an adaptive vector icon drawn as a tiny quality line, with dim,
+  mid and bright segments, a red freeze dot and the playhead. The TV banner moved
+  to `drawable-xhdpi`, where Android TV expects it.
+- **Lint is clean.** Media3's `Format` bitrate fields are `@UnstableApi`, so
+  `bitrateOrNull()` opts in, in one small function. `app/lint.xml` records the two
+  warnings we accept, with the reason for each.
+- **ViewModel tests with MockK:** `LibraryViewModelTest` and `LogViewModelTest`
+  mock the repositories. 34 unit tests in total.
+- **Removed unused things:** `LibraryState.isLoading`, the Room Gradle plugin entry,
+  and MockK in modules that don't use it.
+
+### New concepts
+
+**MockK.** `mockk<CatalogRepository>()` makes a fake object.
+`coEvery { repo.getCatalog() } returns catalog` sets what a `suspend` function
+returns (`every` is for normal functions). Returning a `MutableStateFlow` from the
+mock lets a test "save a result" by setting its value.
+
+**Testing ViewModels on the JVM.** `viewModelScope` runs on `Dispatchers.Main`,
+which only exists on a device. `Dispatchers.setMain(UnconfinedTestDispatcher())` in
+`@Before` swaps in a test dispatcher that runs coroutines immediately, and
+`resetMain()` in `@After` puts it back.
+
+**AnnotatedString.** A string with styles on parts of it. Here it gives digits the
+"tnum" font feature and leaves everything else alone.
+
+**Adaptive icons (Android 8+).** A background layer and a foreground layer that
+the launcher masks into its own shape. Keep the drawing inside the middle 66dp of
+the 108dp canvas, because the rest may be cropped.
+
+**Android Lint.** Run `./gradlew lintDebug`. It found real issues: unstable API use
+without opt-in, a missing app icon, and a banner in the wrong folder.
+
+---
+
+## Home screen + Settings
+
+### What changed
+
+- **Library backdrop:** the focused film's artwork (Tears of Steel, Big Buck Bunny,
+  Sintel) fills the screen behind the list. It crossfades when focus moves and is
+  darkened by gradient scrims so text stays readable. The images are CC BY 3.0
+  © Blender Foundation, from Wikimedia Commons, resized to 1280px (about 130–175 KB
+  each) and credited in Settings → About.
+- **Motion:** the selected film title grows and the others settle smaller
+  (`animateFloatAsState` + `graphicsLayer`, no recomposition per frame).
+- **Data on the rows:** each tested version shows its last test's mini quality line (no box behind it: on the off-white focus fill it switches to dark shades),
+  freezes included.
+- **Capability strip:** outlined chips for what the TV plays, then "Can't play…" in
+  the problem color.
+- **Settings is a real screen** (list/detail, like the Library):
+  - This TV
+  - Video decoders
+  - Display
+  - Saved results, with a two-step clear
+  - About & credits
+- **Navigation:** Log and Settings open on top of the Library (`popUpTo(LIBRARY)`),
+  so BACK from any tab returns home.
+- **Tests:** `SettingsViewModelTest` (decoder grouping, two-press clear, cancel on
+  leaving). 37 unit tests in total.
+
+### New concepts
+
+**`Crossfade`.** Animates between two versions of some content whenever its
+`targetState` changes. Here that's the drawable id of the focused film's artwork.
+
+**Scrims.** A gradient from the background color to transparent, laid over a photo
+so text on top stays readable. It's the one place the spec allows a gradient.
+
+**Explicit resource mapping instead of lookup by name.** `backdropFor(filmId)` is a
+plain `when` returning `R.drawable.…`. `Resources.getIdentifier("backdrop_$id")`
+would also work, but it's slow and fails silently if a name is mistyped, while the
+`when` is checked by the compiler.
+
+**More of `MediaDrm` and `MediaCodecInfo`.** `getPropertyString("version")` and
+`"maxHdcpLevel"` describe the Widevine module and HDMI protection.
+`MediaCodecInfo.isHardwareAccelerated` (Android 10+) tells a hardware decoder chip
+from a software one.
+
+**Destructive actions on a remote.** A TV has no undo and OK is easy to press twice,
+so clearing takes two presses, and moving to another section cancels the half-done
+clear. A unit test checks that `deleteAll()` is called only on the second press.
+
+**Steering focus out of content.** LEFT from the Clear button would go to whichever
+section was geometrically nearest. `focusProperties { left = … }` sends it back to
+"Saved results".
+
+---
+
+## Consistent D-pad focus
+
+### What changed
+
+- **Current tab underline:** the current screen's tab has a short underline on
+  every screen, so "where am I" (underline) is never confused with "where is the
+  focus" (filled box).
+- **No more focus jumps:** pressing past an edge (RIGHT on the last column, LEFT
+  past the first tab, RIGHT on a Settings section with nothing to press) now keeps
+  focus where it is. Before, Compose picked the nearest item anywhere on screen,
+  often a header tab.
+- **Entering the header** from below lands on the current screen's tab.
+- **DOWN from the header** returns to the selected film, extra or Settings section.
+- **Artwork for extras:** extras that are one of our films reuse its artwork
+  (Big Buck Bunny 4K, Tears of Steel HEVC, and the AV1 sample, which is also Big
+  Buck Bunny). The live and Apple test patterns say "Artwork not available".
+
+### New concepts
+
+**How D-pad focus search works.** On each arrow press Compose looks for the
+*geometrically nearest* focusable item in that direction, anywhere on screen. When
+there's nothing in that direction nearby, "nearest" can be something far away.
+
+**`focusGroup()` + `focusProperties { onEnter / onExit }`.** A focus group is an area
+treated as one unit:
+- `onExit` runs when focus is about to leave the area; `cancelFocusChange()` keeps it
+  inside. Our `blockFocusExit(…)` helper wraps this.
+- `onEnter` runs when focus comes in; the header uses it to jump straight to the
+  current tab.
+
+**Explicit targets beat clever restoring.** `focusRestorer()` sounded right ("return
+to the last focused item"), but in testing it did not restore when focus arrived by
+arrow key from the header. An explicit `focusProperties { down = selectedItemFocus }`
+on the header tabs does, so it was used instead.
+
+**Testing focus without screenshots.** `adb exec-out uiautomator dump /dev/tty` prints
+the screen's accessibility tree. The node marked `focused="true"` names the focused
+item, so a script can press keys and check where focus went after each press.

@@ -132,6 +132,12 @@ fun PlayerScreen(
                     .padding(24.dp),
             )
             else -> {
+                if (stats.milestones.firstFrameMs == null) {
+                    StartingMessage(
+                        step = startingStep(stats.milestones, state.isProtected),
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
                 if (state.statsVisible) StatsOverlay(state = state, stats = stats)
                 if (state.qualityPanelOpen) {
                     QualityPanel(
@@ -168,7 +174,7 @@ private fun StatsOverlay(state: PlayerState, stats: LiveStats) {
                 .padding(horizontal = SafeAreaHorizontal, vertical = SafeAreaVertical)
                 .width(300.dp)
                 .background(panelBackground)
-                .padding(16.dp),
+                .padding(12.dp),
         )
         StatsPanel(
             title = state.title,
@@ -176,8 +182,18 @@ private fun StatsOverlay(state: PlayerState, stats: LiveStats) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .background(panelBackground)
-                .padding(horizontal = SafeAreaHorizontal, vertical = SafeAreaVertical),
+                // Small padding on top; the bottom keeps the full TV safe-area margin.
+                .padding(start = SafeAreaHorizontal, end = SafeAreaHorizontal, top = 14.dp, bottom = SafeAreaVertical),
         )
+    }
+}
+
+/** Before the first frame: a quiet "Starting…" and the step the player is waiting for. */
+@Composable
+private fun StartingMessage(step: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = "Starting…", style = MaterialTheme.typography.titleLarge)
+        Text(text = step, style = MaterialTheme.typography.bodyMedium, color = SecondaryTextColor)
     }
 }
 

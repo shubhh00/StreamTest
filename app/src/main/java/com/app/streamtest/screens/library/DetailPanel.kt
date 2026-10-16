@@ -1,5 +1,7 @@
 package com.app.streamtest.screens.library
 
+import com.app.streamtest.ui.components.blockFocusExit
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -17,6 +19,7 @@ import com.app.streamtest.domain.catalog.Film
 import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.catalog.StreamVersion
 import com.app.streamtest.domain.results.TestResult
+import com.app.streamtest.domain.stats.QualityLineModel
 import com.app.streamtest.ui.defaultSubtitle
 import com.app.streamtest.ui.label
 import com.app.streamtest.ui.resultTextFor
@@ -32,11 +35,13 @@ fun FilmDetailPanel(
     film: Film,
     streamFocusRequesters: Map<String, FocusRequester>,
     lastResults: Map<String, TestResult>,
+    lastResultLines: Map<String, QualityLineModel>,
     filmFocus: FocusRequester,
     onOpenPlayer: (streamId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
+    // RIGHT / DOWN at the edge of the screen do nothing, instead of jumping elsewhere.
+    Column(modifier = modifier.blockFocusExit(FocusDirection.Right, FocusDirection.Down)) {
         Text(
             text = film.description,
             style = MaterialTheme.typography.bodyLarge,
@@ -53,6 +58,7 @@ fun FilmDetailPanel(
                     title = type.label(),
                     subtitle = version.subtitle ?: type.defaultSubtitle(),
                     result = resultTextFor(version.id, lastResults),
+                    qualityLine = lastResultLines[version.id],
                     onClick = { onOpenPlayer(version.id) },
                     modifier = Modifier
                         // Lets code focus this exact row: RIGHT from the film, or back from the Player.

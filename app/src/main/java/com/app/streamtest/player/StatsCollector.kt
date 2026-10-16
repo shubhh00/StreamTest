@@ -101,8 +101,7 @@ class StatsCollector(private val player: ExoPlayer) : AnalyticsListener {
                 videoHeight = format.height,
                 codecs = format.codecs,
                 sampleMimeType = format.sampleMimeType,
-                // Format.NO_VALUE (-1) means the stream doesn't say.
-                bitrate = format.bitrate.takeIf { bitrate -> bitrate != Format.NO_VALUE },
+                bitrate = format.bitrateOrNull(),
                 qualityChanges = it.qualityChanges + change,
             )
         }

@@ -11,4 +11,7 @@ interface ResultsRepository {
 
     /** The newest result for each stream, keyed by stream id (for the Library rows). */
     fun observeLatestPerStream(): Flow<Map<String, TestResult>>
+
+    /** Deletes every saved result (Settings → Saved results). */
+    suspend fun deleteAll()
 }

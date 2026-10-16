@@ -36,5 +36,4 @@ dependencies {
     implementation(libs.media3.common)
 
     testImplementation(libs.junit)
-    testImplementation(libs.mockk)
 }

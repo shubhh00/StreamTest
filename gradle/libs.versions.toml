@@ -15,7 +15,7 @@ composeBom = "2026.09.00"
 tvMaterial = "1.1.0"
 navigationCompose = "2.10.2"
 media3 = "1.11.1"
-room = "2.8.5"               # Milestone 6
+room = "2.8.5"
 kotlinxSerialization = "1.11.0"
 coroutines = "1.11.0"
 junit = "4.13.2"
@@ -63,4 +63,3 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-room = { id = "androidx.room", version.ref = "room" }

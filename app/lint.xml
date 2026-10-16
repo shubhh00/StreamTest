@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lint warnings we have decided to accept, with the reason for each. -->
+<lint>
+    <!-- We stay on the newest AGP that Android Studio 2026.1.1 can sync (see
+         gradle/libs.versions.toml). Raise it after updating Android Studio. -->
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <!-- The only bitmap is the TV banner, which Android TV expects in drawable-xhdpi
+         at 320x180. The launcher icon is a vector, so no other density folders are needed. -->
+    <issue id="IconMissingDensityFolder" severity="ignore" />
+</lint>

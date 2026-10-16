@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.app.streamtest.domain.stats.QualityBucket
 import com.app.streamtest.domain.stats.QualityLineModel
+import com.app.streamtest.ui.theme.BackgroundColor
 import com.app.streamtest.ui.theme.LineColor
 import com.app.streamtest.ui.theme.ProblemColor
 import com.app.streamtest.ui.theme.QualityHighColor
@@ -25,7 +26,10 @@ import com.app.streamtest.ui.theme.TextColor
  * - the played part in segments, brighter = sharper (480p dim, 720p mid, 1080p+ off-white),
  * - a dot in the problem color at each freeze,
  * - a small vertical line at the playhead (only when [playheadFraction] is given).
- * Used in the Player (4dp) and, later, the Log (3dp).
+ * Used in the Player (4dp), the Log (3dp) and the Library rows (2dp).
+ *
+ * [onLightBackground]: drawn on the off-white focus fill, the shades flip to dark
+ * (darker = sharper) so the line stays readable without a box behind it.
  */
 @Composable
 fun QualityLine(
@@ -33,6 +37,7 @@ fun QualityLine(
     modifier: Modifier = Modifier,
     playheadFraction: Float? = null,
     thickness: Dp = 4.dp,
+    onLightBackground: Boolean = false,
 ) {
     // With a playhead the canvas is taller, so the playhead mark can stick out above and below.
     val canvasHeight = if (playheadFraction != null) thickness * 3 else thickness
@@ -41,11 +46,12 @@ fun QualityLine(
         val top = (size.height - lineThickness) / 2
         val centerY = size.height / 2
 
-        drawRect(color = LineColor, topLeft = Offset(0f, top), size = Size(size.width, lineThickness))
+        val trackColor = if (onLightBackground) BackgroundColor.copy(alpha = 0.15f) else LineColor
+        drawRect(color = trackColor, topLeft = Offset(0f, top), size = Size(size.width, lineThickness))
 
         model.segments.forEach { segment ->
             drawRect(
-                color = segment.bucket.color(),
+                color = segment.bucket.color(onLightBackground),
                 topLeft = Offset(segment.startFraction * size.width, top),
                 size = Size((segment.endFraction - segment.startFraction) * size.width, lineThickness),
             )
@@ -64,8 +70,8 @@ fun QualityLine(
     }
 }
 
-private fun QualityBucket.color(): Color = when (this) {
-    QualityBucket.LOW -> QualityLowColor
-    QualityBucket.MID -> QualityMidColor
-    QualityBucket.HIGH -> QualityHighColor
+private fun QualityBucket.color(onLightBackground: Boolean): Color = when (this) {
+    QualityBucket.LOW -> if (onLightBackground) BackgroundColor.copy(alpha = 0.35f) else QualityLowColor
+    QualityBucket.MID -> if (onLightBackground) BackgroundColor.copy(alpha = 0.6f) else QualityMidColor
+    QualityBucket.HIGH -> if (onLightBackground) BackgroundColor else QualityHighColor
 }

@@ -10,6 +10,8 @@ import com.app.streamtest.domain.device.DeviceSummary
 import com.app.streamtest.domain.device.toSummary
 import com.app.streamtest.domain.results.ResultsRepository
 import com.app.streamtest.domain.results.TestResult
+import com.app.streamtest.domain.stats.QualityLineModel
+import com.app.streamtest.domain.stats.buildQualityLine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +27,6 @@ sealed interface LibrarySelection {
 }
 
 data class LibraryState(
-    val isLoading: Boolean = true,
     val films: List<Film> = emptyList(),
     val extras: List<ExtraStream> = emptyList(),
     val selection: LibrarySelection = LibrarySelection.FilmAt(0),
@@ -35,6 +36,8 @@ data class LibraryState(
     val lastOpenedStreamId: String? = null,
     /** Newest saved result per stream id, shown on the rows. */
     val lastResults: Map<String, TestResult> = emptyMap(),
+    /** The quality line of each of those results, ready to draw. */
+    val lastResultLines: Map<String, QualityLineModel> = emptyMap(),
 )
 
 @HiltViewModel
@@ -51,7 +54,7 @@ class LibraryViewModel @Inject constructor(
         // Two separate jobs, so the film list shows without waiting for the device check.
         viewModelScope.launch {
             val catalog = catalogRepository.getCatalog()
-            _state.update { it.copy(isLoading = false, films = catalog.films, extras = catalog.extras) }
+            _state.update { it.copy(films = catalog.films, extras = catalog.extras) }
         }
         viewModelScope.launch {
             val summary = deviceInfoRepository.getCapabilities().toSummary()
@@ -60,7 +63,11 @@ class LibraryViewModel @Inject constructor(
         // collect keeps running: every time a test is saved, Room sends a fresh map.
         viewModelScope.launch {
             resultsRepository.observeLatestPerStream().collect { latest ->
-                _state.update { it.copy(lastResults = latest) }
+                val lines = latest.mapValues { (_, result) ->
+                    val timeline = result.timeline
+                    buildQualityLine(timeline.qualityChanges, timeline.freezes, timeline.playedUntilMs, timeline.lengthMs)
+                }
+                _state.update { it.copy(lastResults = latest, lastResultLines = lines) }
             }
         }
     }

@@ -20,7 +20,7 @@ import com.app.streamtest.ui.theme.DimTextColor
 import com.app.streamtest.ui.theme.ProblemColor
 import com.app.streamtest.ui.theme.SecondaryTextColor
 import com.app.streamtest.ui.theme.StatNumberStyle
-import com.app.streamtest.ui.theme.TabularNumbers
+import com.app.streamtest.ui.theme.tabularDigits
 import com.app.streamtest.ui.theme.TextColor
 
 /** Bottom panel: title + time, the six big numbers, and the quality line. */
@@ -28,17 +28,17 @@ import com.app.streamtest.ui.theme.TextColor
 fun StatsPanel(title: String, stats: LiveStats, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(text = title, style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.weight(1f))
             Text(
-                text = timeText(stats),
-                style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TabularNumbers),
+                text = tabularDigits(timeText(stats)),
+                style = MaterialTheme.typography.bodyMedium,
                 color = SecondaryTextColor,
             )
             Spacer(Modifier.width(24.dp))
             Text(text = "▲ hide stats   ▼ quality", style = MaterialTheme.typography.bodySmall, color = DimTextColor)
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
             StatItem(
                 value = formatPlayingAt(stats.videoWidth, stats.videoHeight, stats.codecs, stats.sampleMimeType),
@@ -58,7 +58,7 @@ fun StatsPanel(title: String, stats: LiveStats, modifier: Modifier = Modifier) {
             )
             StatItem(value = stats.droppedFrames.toString(), label = "dropped frames", weight = 0.9f)
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
         QualityLine(model = stats.qualityLine, playheadFraction = stats.playheadFraction)
     }
 }
@@ -66,7 +66,7 @@ fun StatsPanel(title: String, stats: LiveStats, modifier: Modifier = Modifier) {
 @Composable
 private fun RowScope.StatItem(value: String, label: String, weight: Float = 1f, color: Color = TextColor) {
     Column(modifier = Modifier.weight(weight)) {
-        Text(text = value, style = StatNumberStyle, color = color, maxLines = 1)
+        Text(text = tabularDigits(value), style = StatNumberStyle, color = color, maxLines = 1)
         Text(text = label, style = MaterialTheme.typography.labelSmall, color = SecondaryTextColor, maxLines = 1)
     }
 }

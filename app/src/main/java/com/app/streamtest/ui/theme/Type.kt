@@ -44,14 +44,13 @@ val FilmTitleStyle = TextStyle(
     lineHeight = 58.sp,
 )
 
-// The big stat numbers in the Player overlay: regular weight, tabular digits so
-// they don't jiggle as they change.
+// The big stat numbers in the Player overlay: regular weight, not bold.
+// Wrap the text in tabularDigits() so the digits don't jiggle as they change.
 val StatNumberStyle = TextStyle(
     fontFamily = SchibstedGrotesk,
     fontWeight = FontWeight.Normal,
-    fontSize = 26.sp,
-    lineHeight = 32.sp,
-    fontFeatureSettings = TabularNumbers,
+    fontSize = 22.sp,
+    lineHeight = 28.sp,
 )
 
 private val default = Typography()

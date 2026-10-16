@@ -17,6 +17,10 @@ class RoomResultsRepository @Inject constructor(
         dao.insert(result.toEntity())
     }
 
+    override suspend fun deleteAll() {
+        dao.deleteAll()
+    }
+
     override fun observeAll(): Flow<List<TestResult>> =
         dao.observeAll().map { rows -> rows.map { it.toTestResult() } }
 

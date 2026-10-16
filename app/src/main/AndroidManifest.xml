@@ -17,9 +17,12 @@
 
     <!-- android:banner = the 320x180 tile shown for the app on the TV home screen.
          (TV launchers use this wide banner instead of a square icon.) -->
+    <!-- android:icon = the square icon used on phones and in system settings. -->
     <application
         android:name=".StreamTestApp"
         android:banner="@drawable/tv_banner"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.StreamTest">

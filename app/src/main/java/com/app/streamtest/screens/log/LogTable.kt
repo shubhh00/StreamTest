@@ -24,7 +24,7 @@ import com.app.streamtest.ui.theme.FocusCornerRadius
 import com.app.streamtest.ui.theme.ProblemColor
 import com.app.streamtest.ui.theme.RowFocusColor
 import com.app.streamtest.ui.theme.SecondaryTextColor
-import com.app.streamtest.ui.theme.TabularNumbers
+import com.app.streamtest.ui.theme.tabularDigits
 import com.app.streamtest.ui.theme.TextColor
 import java.time.Instant
 import java.time.ZoneId
@@ -58,7 +58,7 @@ fun LogTableHeader() {
 @Composable
 fun LogTableRow(row: LogRow, modifier: Modifier = Modifier) {
     val result = row.result
-    val numberStyle = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TabularNumbers)
+    val numberStyle = MaterialTheme.typography.bodyMedium
     Surface(
         onClick = {}, // no actions in v1
         modifier = modifier.fillMaxWidth(),
@@ -109,7 +109,8 @@ private fun RowScope.Cell(
     modifier: Modifier = Modifier,
 ) {
     Text(
-        text = text,
+        // Digits get equal widths so the columns of numbers line up.
+        text = tabularDigits(text),
         style = style,
         color = color,
         maxLines = 1,

@@ -28,6 +28,7 @@ import com.app.streamtest.domain.catalog.Film
 import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.catalog.StreamVersion
 import com.app.streamtest.domain.device.DeviceSummary
+import com.app.streamtest.ui.backdropFor
 import com.app.streamtest.ui.components.AppHeader
 import com.app.streamtest.ui.components.HeaderTab
 import com.app.streamtest.ui.theme.LineColor
@@ -40,6 +41,7 @@ import com.app.streamtest.ui.theme.StreamTestTheme
 fun LibraryRoot(
     onOpenPlayer: (streamId: String) -> Unit,
     onOpenLog: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -52,6 +54,7 @@ fun LibraryRoot(
             onOpenPlayer(streamId)
         },
         onOpenLog = onOpenLog,
+        onOpenSettings = onOpenSettings,
     )
 }
 
@@ -62,6 +65,7 @@ fun LibraryScreen(
     onExtraFocused: (index: Int) -> Unit,
     onOpenPlayer: (streamId: String) -> Unit,
     onOpenLog: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     // A FocusRequester is a handle for moving focus to one item from code.
     // One per film, and one per playable row (film versions and extras), keyed by stream id.
@@ -83,13 +87,60 @@ fun LibraryScreen(
         (openedRow ?: filmFocusRequesters.first()).requestFocus()
     }
 
+    // The focused film's artwork (if it has any) sits behind everything.
+    val selection = state.selection
+    val backdrop = when (selection) {
+        is LibrarySelection.FilmAt -> state.films.getOrNull(selection.index)?.let { backdropFor(it.id) }
+        is LibrarySelection.ExtraAt -> state.extras.getOrNull(selection.index)?.let { backdropFor(it.stream.id) }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        FilmBackdrop(imageRes = backdrop, modifier = Modifier.fillMaxSize())
+        LibraryContent(
+            state = state,
+            filmFocusRequesters = filmFocusRequesters,
+            streamFocusRequesters = streamFocusRequesters,
+            showArtworkCredit = backdrop != null,
+            onFilmFocused = onFilmFocused,
+            onExtraFocused = onExtraFocused,
+            onOpenPlayer = onOpenPlayer,
+            onOpenLog = onOpenLog,
+            onOpenSettings = onOpenSettings,
+        )
+    }
+}
+
+@Composable
+private fun LibraryContent(
+    state: LibraryState,
+    filmFocusRequesters: List<FocusRequester>,
+    streamFocusRequesters: Map<String, FocusRequester>,
+    showArtworkCredit: Boolean,
+    onFilmFocused: (index: Int) -> Unit,
+    onExtraFocused: (index: Int) -> Unit,
+    onOpenPlayer: (streamId: String) -> Unit,
+    onOpenLog: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = SafeAreaHorizontal, vertical = SafeAreaVertical),
     ) {
-        AppHeader(selectedTab = HeaderTab.Library, onLibraryClick = {}, onLogClick = onOpenLog)
-        Spacer(Modifier.height(24.dp))
+        AppHeader(
+            selectedTab = HeaderTab.Library,
+            onLibraryClick = {},
+            onLogClick = onOpenLog,
+            onSettingsClick = onOpenSettings,
+            // DOWN from the header returns to the selected film or extra.
+            downTarget = when (val selection = state.selection) {
+                is LibrarySelection.FilmAt -> filmFocusRequesters.getOrNull(selection.index)
+                is LibrarySelection.ExtraAt -> state.extras.getOrNull(selection.index)?.let { streamFocusRequesters[it.stream.id] }
+            } ?: FocusRequester.Default,
+        )
+        Spacer(Modifier.height(12.dp))
+        CapabilityStrip(summary = state.deviceSummary, modifier = Modifier.padding(horizontal = 12.dp))
+        Spacer(Modifier.height(20.dp))
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
             FilmColumn(
                 films = state.films,
@@ -98,6 +149,7 @@ fun LibraryScreen(
                 filmFocusRequesters = filmFocusRequesters,
                 streamFocusRequesters = streamFocusRequesters,
                 lastResults = state.lastResults,
+                lastResultLines = state.lastResultLines,
                 onFilmFocused = onFilmFocused,
                 onExtraFocused = onExtraFocused,
                 onOpenPlayer = onOpenPlayer,
@@ -111,6 +163,7 @@ fun LibraryScreen(
                         film = film,
                         streamFocusRequesters = streamFocusRequesters,
                         lastResults = state.lastResults,
+                        lastResultLines = state.lastResultLines,
                         filmFocus = filmFocusRequesters[selection.index],
                         onOpenPlayer = onOpenPlayer,
                         modifier = panelModifier,
@@ -124,7 +177,7 @@ fun LibraryScreen(
         Spacer(Modifier.height(12.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(LineColor))
         Spacer(Modifier.height(12.dp))
-        DeviceFooter(summary = state.deviceSummary)
+        LibraryFooter(hasArtwork = showArtworkCredit)
     }
 }
 
@@ -141,7 +194,6 @@ private fun LibraryScreenPreview() {
         ),
     )
     val state = LibraryState(
-        isLoading = false,
         films = listOf(tears, tears.copy(id = "bbb", title = "Big Buck Bunny")),
         extras = listOf(
             ExtraStream("Akamai live stream", "Live 1080p · no fixed end",
@@ -151,7 +203,7 @@ private fun LibraryScreenPreview() {
     )
     StreamTestTheme {
         Surface {
-            LibraryScreen(state = state, onFilmFocused = {}, onExtraFocused = {}, onOpenPlayer = {}, onOpenLog = {})
+            LibraryScreen(state = state, onFilmFocused = {}, onExtraFocused = {}, onOpenPlayer = {}, onOpenLog = {}, onOpenSettings = {})
         }
     }
 }

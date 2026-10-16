@@ -1,5 +1,7 @@
 package com.app.streamtest.screens.log
 
+import com.app.streamtest.ui.components.blockFocusExit
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,22 +35,23 @@ import com.app.streamtest.ui.theme.SafeAreaHorizontal
 import com.app.streamtest.ui.theme.SafeAreaVertical
 import com.app.streamtest.ui.theme.SecondaryTextColor
 import com.app.streamtest.ui.theme.StreamTestTheme
-import com.app.streamtest.ui.theme.TabularNumbers
+import com.app.streamtest.ui.theme.tabularDigits
 import java.util.Locale
 
 // Root: gets the ViewModel from Hilt and passes plain state to the Screen.
 @Composable
 fun LogRoot(
     onOpenLibrary: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: LogViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LogScreen(state = state, onOpenLibrary = onOpenLibrary)
+    LogScreen(state = state, onOpenLibrary = onOpenLibrary, onOpenSettings = onOpenSettings)
 }
 
 /** Every saved test, grouped by film, with a one-line summary on top. */
 @Composable
-fun LogScreen(state: LogState, onOpenLibrary: () -> Unit) {
+fun LogScreen(state: LogState, onOpenLibrary: () -> Unit, onOpenSettings: () -> Unit) {
     // Focus starts on the first row once there are results (▲▼ then moves through them).
     // With no results, the "Log" tab in the header takes focus instead.
     val firstRowFocus = remember { FocusRequester() }
@@ -66,6 +69,7 @@ fun LogScreen(state: LogState, onOpenLibrary: () -> Unit) {
             selectedTab = HeaderTab.Log,
             onLibraryClick = onOpenLibrary,
             onLogClick = {},
+            onSettingsClick = onOpenSettings,
             focusSelectedTabOnStart = !hasRows,
         )
         Spacer(Modifier.height(24.dp))
@@ -83,15 +87,20 @@ fun LogScreen(state: LogState, onOpenLibrary: () -> Unit) {
         }
 
         Text(
-            text = summaryLine(summary),
-            style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TabularNumbers),
+            text = tabularDigits(summaryLine(summary)),
+            style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(16.dp))
         LogTableHeader()
         Box(Modifier.fillMaxWidth().height(1.dp).background(LineColor))
         // LazyColumn only builds the rows that are on screen, and scrolls by itself
         // when D-pad focus moves to a row below the edge.
-        LazyColumn(modifier = Modifier.weight(1f)) {
+        // LEFT / RIGHT do nothing on a row: there's nothing beside it.
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .blockFocusExit(FocusDirection.Left, FocusDirection.Right),
+        ) {
             itemsIndexed(state.rows, key = { _, row -> row.result.id }) { index, row ->
                 LogTableRow(
                     row = row,
@@ -120,7 +129,7 @@ private fun summaryLine(summary: ResultsSummary): String {
 private fun LogScreenEmptyPreview() {
     StreamTestTheme {
         Surface {
-            LogScreen(state = LogState(deviceName = "Google TV Streamer"), onOpenLibrary = {})
+            LogScreen(state = LogState(deviceName = "Google TV Streamer"), onOpenLibrary = {}, onOpenSettings = {})
         }
     }
 }

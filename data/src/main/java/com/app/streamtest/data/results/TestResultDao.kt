@@ -16,6 +16,9 @@ interface TestResultDao {
     @Insert
     suspend fun insert(result: TestResultEntity): Long
 
+    @Query("DELETE FROM test_results")
+    suspend fun deleteAll()
+
     @Query("SELECT * FROM test_results ORDER BY startedAtMillis DESC")
     fun observeAll(): Flow<List<TestResultEntity>>
 

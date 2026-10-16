@@ -1,9 +1,11 @@
 package com.app.streamtest.player
 
+import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 
 /** One video quality the stream offers, as shown in the Quality panel. */
 data class QualityOption(
@@ -35,12 +37,27 @@ fun Tracks.videoQualityOptions(): List<QualityOption> {
                     key = "$groupIndex:$trackIndex",
                     width = format.width,
                     height = format.height,
-                    bitrate = format.bitrate.takeIf { it != Format.NO_VALUE },
+                    bitrate = format.bitrateOrNull(),
                 ),
             )
         }
     }
     return options.sortedWith(compareByDescending<QualityOption> { it.height }.thenByDescending { it.bitrate ?: 0 })
+}
+
+/**
+ * The track's bitrate in bits per second, or null if the stream doesn't say.
+ * Playlists give a peak (highest) and/or an average bitrate; we prefer the peak,
+ * which is what HLS playlists list as BANDWIDTH. Format.NO_VALUE (-1) = not given.
+ *
+ * Media3 marks all of Format's bitrate fields as @UnstableApi (they may change between
+ * versions), so we opt in here, in this one small function.
+ */
+@OptIn(UnstableApi::class)
+fun Format.bitrateOrNull(): Int? = when {
+    peakBitrate != Format.NO_VALUE -> peakBitrate
+    averageBitrate != Format.NO_VALUE -> averageBitrate
+    else -> null
 }
 
 /**

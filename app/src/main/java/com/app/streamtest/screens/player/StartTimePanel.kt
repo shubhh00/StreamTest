@@ -16,7 +16,7 @@ import com.app.streamtest.domain.stats.steps
 import com.app.streamtest.ui.theme.DimTextColor
 import com.app.streamtest.ui.theme.SecondaryTextColor
 import com.app.streamtest.ui.theme.StatNumberStyle
-import com.app.streamtest.ui.theme.TabularNumbers
+import com.app.streamtest.ui.theme.tabularDigits
 
 /**
  * Top-right panel: total time to the first frame, then each step and the time it
@@ -25,10 +25,9 @@ import com.app.streamtest.ui.theme.TabularNumbers
  */
 @Composable
 fun StartTimePanel(milestones: StartMilestones, isProtected: Boolean, modifier: Modifier = Modifier) {
-    val numberStyle = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TabularNumbers)
     Column(modifier = modifier) {
         Text(text = "Start time, step by step", style = MaterialTheme.typography.labelMedium, color = SecondaryTextColor)
-        Text(text = formatMs(milestones.firstFrameMs), style = StatNumberStyle)
+        Text(text = tabularDigits(formatMs(milestones.firstFrameMs)), style = StatNumberStyle)
         Spacer(Modifier.height(8.dp))
         milestones.steps().forEach { step ->
             val value = when {
@@ -44,7 +43,7 @@ fun StartTimePanel(milestones: StartMilestones, isProtected: Boolean, modifier: 
                     color = if (step.gapMs == null) DimTextColor else SecondaryTextColor,
                     modifier = Modifier.weight(1f),
                 )
-                Text(text = value, style = numberStyle)
+                Text(text = tabularDigits(value), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

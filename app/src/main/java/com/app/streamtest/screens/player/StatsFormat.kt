@@ -1,5 +1,6 @@
 package com.app.streamtest.screens.player
 
+import com.app.streamtest.domain.stats.StartMilestones
 import com.app.streamtest.domain.stats.StartStepKind
 import com.app.streamtest.domain.stats.standardHeight
 import java.util.Locale
@@ -27,6 +28,10 @@ fun codecName(codecs: String?, sampleMimeType: String?): String {
         value.startsWith("vp09") || value.startsWith("vp9") || value.contains("vp9") -> "VP9"
         value.startsWith("av01") || value.contains("video/av01") -> "AV1"
         value.startsWith("dvh") || value.contains("dolby-vision") -> "Dolby Vision"
+        value.contains("vp8") -> "VP8"
+        value.contains("video/3gpp") -> "H.263"
+        value.contains("mp4v") -> "MPEG-4"
+        value.contains("mpeg2") -> "MPEG-2"
         value.isBlank() -> "?"
         else -> value.substringAfter('/').uppercase(Locale.ROOT)
     }
@@ -56,6 +61,13 @@ fun formatClock(ms: Long): String {
     } else {
         String.format(Locale.US, "%d:%02d", minutes, seconds)
     }
+}
+
+/** What the player is waiting for before the first frame, for the "Starting…" message. */
+fun startingStep(milestones: StartMilestones, isProtected: Boolean): String = when {
+    milestones.manifestLoadedMs == null -> "Loading the playlist / manifest"
+    isProtected && milestones.drmKeysLoadedMs == null -> "Getting the DRM license"
+    else -> "Loading the first video"
 }
 
 fun StartStepKind.label(): String = when (this) {

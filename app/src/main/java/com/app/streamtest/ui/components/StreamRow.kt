@@ -14,11 +14,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.app.streamtest.domain.stats.QualityLineModel
 import com.app.streamtest.ui.theme.DimTextColor
+import com.app.streamtest.ui.theme.tabularDigits
 
 /**
  * One playable row: name and a one-line subtitle on the left, the last result on
- * the right. Used for film versions and for "More streams".
+ * the right, and (once tested) that test's quality line under the result.
+ * Used for film versions, "More streams", the Quality panel and Settings.
  */
 @Composable
 fun StreamRow(
@@ -28,6 +31,7 @@ fun StreamRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     onFocused: () -> Unit = {},
+    qualityLine: QualityLineModel? = null,
 ) {
     FocusFillSurface(
         onClick = onClick,
@@ -50,7 +54,18 @@ fun StreamRow(
                 )
             }
             Spacer(Modifier.width(16.dp))
-            Text(text = result, style = MaterialTheme.typography.bodySmall, color = secondaryTextColor(focused))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(text = tabularDigits(result), style = MaterialTheme.typography.bodySmall, color = secondaryTextColor(focused))
+                if (qualityLine != null) {
+                    QualityLine(
+                        model = qualityLine,
+                        thickness = 2.dp,
+                        // On the off-white focus fill the line switches to dark shades.
+                        onLightBackground = focused,
+                        modifier = Modifier.padding(top = 6.dp).width(104.dp),
+                    )
+                }
+            }
         }
     }
 }
