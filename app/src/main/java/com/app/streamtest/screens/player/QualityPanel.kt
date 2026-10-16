@@ -57,11 +57,12 @@ fun QualityPanel(
             onClick = { onQualitySelected(null) },
             modifier = if (forcedQualityKey == null) Modifier.focusRequester(initialFocus) else Modifier,
         )
-        qualities.forEach { quality ->
+        val rowTexts = qualityRowTexts(qualities)
+        qualities.forEachIndexed { index, quality ->
             val isForced = quality.key == forcedQualityKey
             StreamRow(
-                title = formatResolutionName(quality.width, quality.height),
-                subtitle = "${quality.width}×${quality.height} · ${formatBitrate(quality.bitrate)}",
+                title = rowTexts[index].title,
+                subtitle = rowTexts[index].subtitle,
                 result = if (isForced) "selected" else "",
                 onClick = { onQualitySelected(quality.key) },
                 modifier = if (isForced) Modifier.focusRequester(initialFocus) else Modifier,
@@ -74,6 +75,28 @@ fun QualityPanel(
                 color = DimTextColor,
                 modifier = Modifier.fillMaxWidth().padding(12.dp),
             )
+        }
+    }
+}
+
+/** What one quality row says. */
+internal data class QualityRowText(val title: String, val subtitle: String)
+
+/**
+ * Usually "1080p" over "1920×856 · 4.2 Mbps". Streams often offer the same size at two
+ * bitrates (e.g. 1680×750 at 1.7 and 2.5 Mbps); two rows both called "1080p" would look
+ * like a mistake, so then the bitrate moves into the title: "1080p · 2.5 Mbps".
+ */
+internal fun qualityRowTexts(qualities: List<QualityOption>): List<QualityRowText> {
+    val names = qualities.map { formatResolutionName(it.width, it.height) }
+    return qualities.mapIndexed { index, quality ->
+        val name = names[index]
+        val size = "${quality.width}×${quality.height}"
+        val bitrate = formatBitrate(quality.bitrate)
+        if (names.count { it == name } > 1) {
+            QualityRowText(title = "$name · $bitrate", subtitle = size)
+        } else {
+            QualityRowText(title = name, subtitle = "$size · $bitrate")
         }
     }
 }

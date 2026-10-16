@@ -684,3 +684,10 @@ Android Gradle Plugin downloads the missing SDK platform (37) itself.
 - **A pixel height isn't a quality name.** Tears of Steel's 480p track is 854×380 (a wide
   film), so a saved "forced 380p" didn't match the picker's "480p". Forced heights are
   now saved through the same `standardHeight()` the picker uses.
+- **One size can come at two bitrates.** The Tears of Steel HLS playlist has two
+  1680×750 tracks (about 1.5 and 2.2 Mbps of video). The picker showed "1080p" twice, so a
+  repeated name now gets its bitrate in the title. HLS also quotes `BANDWIDTH` including
+  audio, so its numbers read a little higher than the video alone.
+- **Text burned into a test video is the encoder's own label.** Google's DASH encode
+  prints "240p" on its 320×142 track (named after the old 4:3 320×240 size); the app
+  calls it 144p by widescreen naming. Same track, two naming conventions.
