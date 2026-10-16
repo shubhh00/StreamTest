@@ -58,6 +58,11 @@ This needs API 26 or higher, which matches our minSdk.
 
 ### Gotchas
 
+- **Android Studio limits the AGP version.** Each Android Studio release can only
+  sync up to a certain Android Gradle Plugin version. AGP 9.4.1 built fine with
+  `./gradlew` from the terminal, but Android Studio 2026.1.1 refused to sync it
+  ("Latest supported version is AGP 9.2.1"). The fix was to use AGP 9.2.1.
+  "Sync" is only the IDE loading the project; the build itself is done by Gradle.
 - **AGP 9 has Kotlin built in.** The Android modules don't apply the
   `org.jetbrains.kotlin.android` plugin any more. Only `:domain` (pure Kotlin)
   applies `kotlin.jvm`.

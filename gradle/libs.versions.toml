@@ -1,7 +1,9 @@
 # All versions in one place. Checked against Google Maven / Maven Central on 2026-10-16
 # (latest stable of each). Some libraries are listed now but only used from a later milestone.
 [versions]
-agp = "9.4.1"
+# Not the newest AGP (9.4.1): Android Studio 2026.1.1 can only sync up to 9.2.1.
+# Raise this after updating Android Studio.
+agp = "9.2.1"
 kotlin = "2.4.21"
 ksp = "2.3.12"
 hilt = "2.60.1"
