@@ -1,0 +1,4 @@
+<resources>
+    <!-- Same value as BackgroundColor in ui/theme/Color.kt; needed here for the window theme. -->
+    <color name="background">#121211</color>
+</resources>

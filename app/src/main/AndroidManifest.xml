@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- "leanback" = the Android TV user interface. required="false" means the app
+         is built for TV but can still be installed on phones (handy for testing). -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <!-- TVs have no touchscreen. Without this line, Google Play would hide the app
+         from TVs, because Android assumes every app needs touch by default. -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <!-- Needed to stream the public test videos. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- android:banner = the 320x180 tile shown for the app on the TV home screen.
+         (TV launchers use this wide banner instead of a square icon.) -->
+    <application
+        android:name=".StreamTestApp"
+        android:banner="@drawable/tv_banner"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.StreamTest">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <!-- LAUNCHER = show the app in a phone's app drawer (for testing). -->
+                <category android:name="android.intent.category.LAUNCHER" />
+                <!-- LEANBACK_LAUNCHER = show the app on the Android TV home screen.
+                     Without it the app installs on a TV but has no tile to open it. -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

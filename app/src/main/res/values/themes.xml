@@ -1,0 +1,9 @@
+<resources>
+    <!-- Window theme only. All real styling is done in Compose (ui/theme).
+         The dark window background avoids a white flash while the app starts. -->
+    <style name="Theme.StreamTest" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/background</item>
+        <item name="android:navigationBarColor">@color/background</item>
+    </style>
+</resources>
