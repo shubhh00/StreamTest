@@ -29,6 +29,8 @@ data class LibraryState(
     val selection: LibrarySelection = LibrarySelection.FilmAt(0),
     /** null until the device check has finished. */
     val deviceSummary: DeviceSummary? = null,
+    /** The row the user last opened, so focus can go back to it after the Player. */
+    val lastOpenedStreamId: String? = null,
 )
 
 @HiltViewModel
@@ -55,6 +57,14 @@ class LibraryViewModel @Inject constructor(
     /** Called when D-pad focus lands on a film: the right column switches to its versions. */
     fun onFilmFocused(index: Int) {
         _state.update { it.copy(selection = LibrarySelection.FilmAt(index)) }
+    }
+
+    /**
+     * Called just before opening the Player. This ViewModel stays alive while the Player
+     * is on top (the Library is still on the back stack), so the id is still here on return.
+     */
+    fun onStreamOpened(streamId: String) {
+        _state.update { it.copy(lastOpenedStreamId = streamId) }
     }
 
     /** Called when D-pad focus lands on a "More streams" row. */

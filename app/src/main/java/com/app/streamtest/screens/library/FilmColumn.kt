@@ -26,6 +26,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.app.streamtest.domain.catalog.ExtraStream
 import com.app.streamtest.domain.catalog.Film
+import com.app.streamtest.ui.NOT_TESTED_YET
 import com.app.streamtest.ui.components.StreamRow
 import com.app.streamtest.ui.theme.DimTextColor
 import com.app.streamtest.ui.theme.FilmTitleStyle
@@ -45,14 +46,18 @@ fun FilmColumn(
     extras: List<ExtraStream>,
     selection: LibrarySelection,
     filmFocusRequesters: List<FocusRequester>,
-    firstVersionFocus: FocusRequester,
+    streamFocusRequesters: Map<String, FocusRequester>,
     onFilmFocused: (index: Int) -> Unit,
     onExtraFocused: (index: Int) -> Unit,
     onOpenPlayer: (streamId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // rememberScrollState is "saveable": the scroll position survives a trip to the Player.
     Column(modifier = modifier.verticalScroll(rememberScrollState())) {
         films.forEachIndexed { index, film ->
+            // RIGHT (or OK) on a film jumps to the row of its first available version.
+            val firstVersionFocus = film.firstAvailableVersion()?.let { streamFocusRequesters[it.id] }
+                ?: FocusRequester.Default
             FilmRow(
                 number = index + 1,
                 film = film,
@@ -60,7 +65,6 @@ fun FilmColumn(
                 focusRequester = filmFocusRequesters[index],
                 rightTarget = firstVersionFocus,
                 onFocused = { onFilmFocused(index) },
-                // OK on a film does the same as RIGHT: go to its versions.
                 onClick = { firstVersionFocus.requestFocus() },
             )
         }
@@ -78,8 +82,10 @@ fun FilmColumn(
                 result = NOT_TESTED_YET,
                 onClick = { onOpenPlayer(extra.stream.id) },
                 onFocused = { onExtraFocused(index) },
-                // Extras have nothing to the right to move into, so RIGHT does nothing.
-                modifier = Modifier.focusProperties { right = FocusRequester.Cancel },
+                modifier = Modifier
+                    .focusRequester(streamFocusRequesters.getValue(extra.stream.id))
+                    // Extras have nothing to the right to move into, so RIGHT does nothing.
+                    .focusProperties { right = FocusRequester.Cancel },
             )
         }
     }

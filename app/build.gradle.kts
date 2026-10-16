@@ -30,6 +30,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true // for BuildConfig.DEBUG
     }
 }
 
@@ -50,6 +51,12 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.tv.material)
     implementation(libs.androidx.navigation.compose)
+
+    // Media3: the player, HLS and DASH support, and PlayerView.
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.exoplayer.dash)
+    implementation(libs.media3.ui)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

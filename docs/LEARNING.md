@@ -156,3 +156,90 @@ when focus moves to an item below the edge. Compose brings the focused item into
 - **A debug build takes up to 6 seconds to open on the emulator.** A D-pad press
   sent before the first frame is lost, because nothing has focus yet. This only
   matters for scripted tests.
+
+---
+
+## Milestone 3 — Playback
+
+### What was built
+
+- `PlayerFactory` builds the `ExoPlayer` and a `MediaItem` for a stream. For
+  Protected streams it also adds the Widevine `DrmConfiguration`.
+- `PlayerViewModel` owns the player: it looks up the stream, calls `prepare()`,
+  and calls `release()` in `onCleared()`.
+- The Player screen shows the video full screen with Media3's `PlayerView`
+  inside `AndroidView`, with the built-in controls switched off.
+- Playback pauses when the app goes to the background and resumes when it comes back.
+- BACK returns to the Library with focus on the exact row that was opened.
+- Every stream in the catalog was played on the Android TV emulator (API 36,
+  Widevine L3). Two extras were replaced because they didn't do their job.
+
+### New concepts
+
+**What ExoPlayer does after `prepare()`:**
+1. It downloads the playlist (HLS) or manifest (DASH).
+2. It picks a starting quality.
+3. It downloads the first video and audio chunks.
+4. It decodes them and shows the first frame.
+
+`playWhenReady = true` means "start as soon as enough is buffered".
+
+**MediaItem and MIME type.** A `MediaItem` says *what* to play. We set the MIME
+type (`APPLICATION_M3U8` or `APPLICATION_MPD`) explicitly, so Media3 doesn't have
+to guess from the URL. Some URLs end in `.ism/.m3u8`, which is easy to guess wrong.
+
+**Adaptive bitrate in action.** Tears of Steel HLS started at 784×350 and switched
+to 1680×750 about 12 seconds later, once the player had measured the network speed.
+Starting low and climbing is normal ABR behaviour.
+
+**Widevine on the emulator.** All Protected streams played. The log showed
+`drmKeysLoaded`, which means the license server sent the key. The emulator only
+has L3 (software). A real TV with L1 decodes protected video in secure hardware.
+
+**Why `useController = false`.** `PlayerView` comes with its own play/pause bar.
+We hide it because we draw our own overlay in Compose. The built-in controls would
+also grab D-pad focus.
+
+**Who owns the player.** The ViewModel creates and releases the player, so it
+isn't recreated when the screen recomposes. `release()` matters on TVs, which
+have very few hardware video decoders.
+
+**Restoring focus after BACK.** Leaving for the Player removes the Library from
+composition, but its ViewModel stays alive on the back stack. The ViewModel
+remembers `lastOpenedStreamId`. When the Library comes back, a `LaunchedEffect`
+calls `requestFocus()` on that row's `FocusRequester`.
+
+**`LifecycleStartEffect`.** Runs code when the screen becomes visible, and runs
+`onStopOrDispose` when it's hidden (HOME on the remote) or closed. We use it to
+pause the video when nobody can see it.
+
+**`EventLogger`.** One line, `player.addAnalyticsListener(EventLogger())` (debug
+builds only), prints every Media3 event to Logcat under the tag `EventLogger`. It
+was used to verify each stream: `renderedFirstFrame`, `videoInputFormat` (the
+resolution and codec playing) and `drmKeysLoaded`.
+
+### First results on the Android TV emulator (debug build)
+
+Time from `prepare()` to the first frame:
+
+| Film | HLS | DASH | Protected |
+|---|---|---|---|
+| Tears of Steel | 3.9 s | 2.7 s | 5.5 s |
+| Big Buck Bunny | 1.3 s | 2.6 s | 3.6 s |
+| Sintel | — | 2.1 s | 3.5 s |
+| Angel One | 8.4 s | 1.8 s | 3.6 s |
+
+The Protected version is roughly 1–3 s slower to start than plain DASH. Most of
+that is the license request. These are single runs on an emulator; Milestone 4
+measures this properly.
+
+### Gotchas
+
+- **A stream that answers 200 can still fail in the player.** The Akamai live
+  playlist loaded, but playback failed with `ERROR_CODE_IO_BAD_HTTP_STATUS`, so it
+  was replaced with Unified Streaming's live stream.
+- **A stream that offers both H.264 and HEVC may never use HEVC.** For Apple's
+  "HEVC" sample, ExoPlayer picked the H.264 version, so it didn't test HEVC at all.
+  It was replaced with an HEVC-only DASH stream.
+- **Sintel and Angel One's DASH versions are VP9, not H.264.** The codec differs
+  between versions, which matters when comparing results.

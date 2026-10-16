@@ -47,7 +47,10 @@ fun LibraryRoot(
         state = state,
         onFilmFocused = viewModel::onFilmFocused,
         onExtraFocused = viewModel::onExtraFocused,
-        onOpenPlayer = onOpenPlayer,
+        onOpenPlayer = { streamId ->
+            viewModel.onStreamOpened(streamId)
+            onOpenPlayer(streamId)
+        },
         onOpenLog = onOpenLog,
     )
 }
@@ -60,14 +63,24 @@ fun LibraryScreen(
     onOpenPlayer: (streamId: String) -> Unit,
     onOpenLog: () -> Unit,
 ) {
-    // One FocusRequester per film (so code can move focus to any film), plus one for
-    // the first version row on the right.
-    val filmFocusRequesters = remember(state.films.size) { List(state.films.size) { FocusRequester() } }
-    val firstVersionFocus = remember { FocusRequester() }
+    // A FocusRequester is a handle for moving focus to one item from code.
+    // One per film, and one per playable row (film versions and extras), keyed by stream id.
+    val filmFocusRequesters = remember(state.films) { List(state.films.size) { FocusRequester() } }
+    val streamFocusRequesters = remember(state.films, state.extras) {
+        val ids = state.films.flatMap { film -> film.versions.map { it.id } } + state.extras.map { it.stream.id }
+        ids.associateWith { FocusRequester() }
+    }
 
-    // Focus starts on the first film once the list has loaded.
+    // Where focus goes when this screen appears:
+    // - first visit: the first film;
+    // - back from the Player: the exact row that was opened. Leaving for the Player
+    //   removes this screen from composition, but the ViewModel (and lastOpenedStreamId
+    //   in it) stays alive, so when the screen comes back this effect runs again and
+    //   focuses that row's FocusRequester.
     LaunchedEffect(state.films.isNotEmpty()) {
-        filmFocusRequesters.firstOrNull()?.requestFocus()
+        if (state.films.isEmpty()) return@LaunchedEffect
+        val openedRow = state.lastOpenedStreamId?.let { streamFocusRequesters[it] }
+        (openedRow ?: filmFocusRequesters.first()).requestFocus()
     }
 
     Column(
@@ -83,7 +96,7 @@ fun LibraryScreen(
                 extras = state.extras,
                 selection = state.selection,
                 filmFocusRequesters = filmFocusRequesters,
-                firstVersionFocus = firstVersionFocus,
+                streamFocusRequesters = streamFocusRequesters,
                 onFilmFocused = onFilmFocused,
                 onExtraFocused = onExtraFocused,
                 onOpenPlayer = onOpenPlayer,
@@ -95,7 +108,7 @@ fun LibraryScreen(
                 is LibrarySelection.FilmAt -> state.films.getOrNull(selection.index)?.let { film ->
                     FilmDetailPanel(
                         film = film,
-                        firstVersionFocus = firstVersionFocus,
+                        streamFocusRequesters = streamFocusRequesters,
                         filmFocus = filmFocusRequesters[selection.index],
                         onOpenPlayer = onOpenPlayer,
                         modifier = panelModifier,

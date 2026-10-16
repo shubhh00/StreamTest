@@ -15,6 +15,10 @@ import androidx.tv.material3.Text
 import com.app.streamtest.domain.catalog.ExtraStream
 import com.app.streamtest.domain.catalog.Film
 import com.app.streamtest.domain.catalog.StreamType
+import com.app.streamtest.domain.catalog.StreamVersion
+import com.app.streamtest.ui.defaultSubtitle
+import com.app.streamtest.ui.label
+import com.app.streamtest.ui.NOT_TESTED_YET
 import com.app.streamtest.ui.components.StreamRow
 import com.app.streamtest.ui.components.UnavailableStreamRow
 import com.app.streamtest.ui.theme.DimTextColor
@@ -25,14 +29,11 @@ import java.net.URI
 @Composable
 fun FilmDetailPanel(
     film: Film,
-    firstVersionFocus: FocusRequester,
+    streamFocusRequesters: Map<String, FocusRequester>,
     filmFocus: FocusRequester,
     onOpenPlayer: (streamId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // The first version that exists gets the FocusRequester that RIGHT on a film jumps to.
-    val firstAvailableType = StreamType.entries.firstOrNull { film.version(it) != null }
-
     Column(modifier = modifier) {
         Text(
             text = film.description,
@@ -46,19 +47,25 @@ fun FilmDetailPanel(
             if (version == null) {
                 UnavailableStreamRow(title = type.label())
             } else {
-                val focusModifier = if (type == firstAvailableType) Modifier.focusRequester(firstVersionFocus) else Modifier
                 StreamRow(
                     title = type.label(),
                     subtitle = version.subtitle ?: type.defaultSubtitle(),
                     result = NOT_TESTED_YET,
                     onClick = { onOpenPlayer(version.id) },
-                    // LEFT from any version goes back to the film it belongs to.
-                    modifier = focusModifier.focusProperties { left = filmFocus },
+                    modifier = Modifier
+                        // Lets code focus this exact row: RIGHT from the film, or back from the Player.
+                        .focusRequester(streamFocusRequesters.getValue(version.id))
+                        // LEFT from any version goes back to the film it belongs to.
+                        .focusProperties { left = filmFocus },
                 )
             }
         }
     }
 }
+
+/** The first version in display order (HLS, DASH, Protected) that this film has. */
+fun Film.firstAvailableVersion(): StreamVersion? =
+    StreamType.entries.firstNotNullOfOrNull { version(it) }
 
 /** Right column for a "More streams" item: just information, nothing focusable. */
 @Composable

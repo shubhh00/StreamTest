@@ -108,11 +108,11 @@
       "note": "Checks 4K at 60 fps (H.264)"
     },
     {
-      "id": "apple-hevc",
-      "title": "Apple HEVC sample",
-      "type": "HLS",
-      "url": "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8",
-      "note": "Checks HEVC (H.265), up to 1080p"
+      "id": "tears-hevc",
+      "title": "Tears of Steel HEVC",
+      "type": "DASH",
+      "url": "https://storage.googleapis.com/wvmedia/clear/hevc/tears/tears.mpd",
+      "note": "Checks HEVC (H.265) decoding"
     },
     {
       "id": "av1-drm",
@@ -123,11 +123,11 @@
       "note": "Checks AV1 decoding (Widevine L3)"
     },
     {
-      "id": "akamai-live",
-      "title": "Akamai live stream",
+      "id": "unified-live",
+      "title": "Live stream",
       "type": "HLS",
-      "url": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
-      "note": "Live 1080p · no fixed end"
+      "url": "https://demo.unified-streaming.com/k8s/live/stable/live.isml/.m3u8",
+      "note": "Live 720p from Unified Streaming · no fixed end"
     },
     {
       "id": "apple-bipbop-low",

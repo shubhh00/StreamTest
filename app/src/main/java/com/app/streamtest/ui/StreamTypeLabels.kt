@@ -1,4 +1,4 @@
-package com.app.streamtest.screens.library
+package com.app.streamtest.ui
 
 import com.app.streamtest.domain.catalog.StreamType
 
