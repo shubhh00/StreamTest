@@ -1,21 +1,27 @@
 package com.app.streamtest.screens.player
 
 import android.content.Context
+import androidx.annotation.OptIn
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.util.EventLogger
 import com.app.streamtest.BuildConfig
 import com.app.streamtest.Routes
 import com.app.streamtest.domain.catalog.CatalogRepository
+import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.catalog.findStream
+import com.app.streamtest.player.LiveStats
 import com.app.streamtest.player.PlayerFactory
+import com.app.streamtest.player.StatsCollector
 import com.app.streamtest.ui.label
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,11 +34,16 @@ data class PlayerState(
     val title: String = "",
     /** Set when the stream can't be found or Media3 reports a playback error. */
     val errorMessage: String? = null,
+    /** Protected (DRM) stream: the start panel then waits for a "DRM license" step. */
+    val isProtected: Boolean = false,
+    /** ▲ on the remote shows/hides the stats overlay. */
+    val statsVisible: Boolean = true,
 )
 
 // @HiltViewModel + @Inject constructor: Hilt builds this ViewModel and passes in what it needs.
 // The player lives here (not in the composable) so it survives recomposition, and it is
 // released exactly once, in onCleared(), when the user leaves the Player screen.
+@OptIn(UnstableApi::class) // EventLogger is marked @UnstableApi in Media3.
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -46,10 +57,16 @@ class PlayerViewModel @Inject constructor(
 
     val player: ExoPlayer = PlayerFactory.createPlayer(context)
 
+    private val statsCollector = StatsCollector(player)
+
+    /** Live numbers for the overlay. */
+    val stats: StateFlow<LiveStats> = statsCollector.stats
+
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state.asStateFlow()
 
     init {
+        statsCollector.attach()
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 // errorCodeName is a readable name such as "ERROR_CODE_IO_BAD_HTTP_STATUS".
@@ -61,6 +78,15 @@ class PlayerViewModel @Inject constructor(
         if (BuildConfig.DEBUG) player.addAnalyticsListener(EventLogger())
 
         viewModelScope.launch { startPlayback() }
+
+        // Some values (buffered ahead, position) change all the time without an event,
+        // so we read them twice a second. The loop stops when the ViewModel is cleared.
+        viewModelScope.launch {
+            while (true) {
+                statsCollector.onTick()
+                delay(500)
+            }
+        }
     }
 
     private suspend fun startPlayback() {
@@ -69,9 +95,16 @@ class PlayerViewModel @Inject constructor(
             _state.update { it.copy(errorMessage = "Unknown stream: $streamId") }
             return
         }
-        _state.update { it.copy(title = "${found.title} — ${found.stream.type.label()}") }
+        _state.update {
+            it.copy(
+                title = "${found.title} — ${found.stream.type.label()}",
+                isProtected = found.stream.type == StreamType.DASH_DRM,
+            )
+        }
 
         player.setMediaItem(PlayerFactory.createMediaItem(found.stream))
+        // Start-up times are measured from this moment.
+        statsCollector.onPrepare()
         // prepare() starts the work: fetch the playlist/manifest, then the first chunks.
         player.prepare()
         // playWhenReady = "start playing as soon as enough video is buffered".
@@ -81,6 +114,11 @@ class PlayerViewModel @Inject constructor(
     /** The app is visible again (e.g. back from the TV home screen): carry on playing. */
     fun onAppVisible() {
         player.playWhenReady = true
+    }
+
+    /** ▲ on the remote. */
+    fun onToggleStats() {
+        _state.update { it.copy(statsVisible = !it.statsVisible) }
     }
 
     /** The app went to the background (HOME on the remote): don't keep playing unseen. */

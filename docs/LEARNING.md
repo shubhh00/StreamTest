@@ -243,3 +243,76 @@ measures this properly.
   It was replaced with an HEVC-only DASH stream.
 - **Sintel and Angel One's DASH versions are VP9, not H.264.** The codec differs
   between versions, which matters when comparing results.
+
+---
+
+## Milestone 4 — Stats
+
+### What was built
+
+- `StatsCollector`: a Media3 `AnalyticsListener` that turns player events into
+  `StateFlow<LiveStats>`. A `PlaybackStatsListener` is attached next to it to count freezes.
+- The Player overlay:
+  - **Bottom panel:** title and time, then six big numbers (playing at, bitrate,
+    buffered ahead, time to start, freezes, dropped frames), then the quality line.
+  - **Top-right panel:** "Start time, step by step".
+  - **▲** hides and shows the overlay.
+- Pure functions in `:domain`, with unit tests:
+  - `buildQualityLine()` turns quality changes and freezes into segments and dots.
+  - `steps()` turns the start-up milestones into steps with gaps.
+  - `standardHeight()` gives the "1080p" name for any resolution.
+- 9 new unit tests, 18 in total.
+
+### New concepts
+
+**AnalyticsListener.** Media3's "tell me everything" listener. The callbacks used:
+
+| Callback | Used for |
+|---|---|
+| `onLoadCompleted` | Manifest loaded (`DATA_TYPE_MANIFEST`) and first video chunk (`DATA_TYPE_MEDIA`) |
+| `onDrmKeysLoaded` | The license server sent the key |
+| `onRenderedFirstFrame` | Time to start |
+| `onVideoInputFormatChanged` | Resolution, codec and bitrate; each change is an ABR switch |
+| `onDroppedVideoFrames` | Frames the device was too slow to show |
+| `onPlaybackStateChanged` | Freezes: BUFFERING after the first frame while playing |
+
+**PlaybackStatsListener.** A ready-made listener that keeps session counters.
+`totalRebufferCount` and `totalRebufferTimeMs` are the freeze numbers.
+
+**Polling vs events.** Buffered ahead (`player.totalBufferedDuration`) and the
+playhead change all the time without an event, so the ViewModel reads them every
+500 ms in a `viewModelScope` loop, which stops by itself when the ViewModel is cleared.
+
+**`SystemClock.elapsedRealtime()`.** A clock that never jumps. The wall clock can be
+changed by the network or the user, which would break timings.
+
+**`@UnstableApi` / `@OptIn`.** Media3 marks advanced APIs (AnalyticsListener,
+PlaybackStatsListener, EventLogger) as "may change between versions". Using them
+means opting in on purpose.
+
+**Catching remote keys.** Keys go to whatever has focus. The Player screen has no
+buttons, so the screen itself is `focusable()`, requests focus on start, and
+catches `Key.DirectionUp` in `onKeyEvent`. It returns `false` for other keys, so
+BACK still works.
+
+**Drawing with Canvas.** The quality line is plain `drawRect` and `drawCircle`
+calls in a Compose `Canvas`, with no extra libraries.
+
+### Gotchas
+
+- **The first video chunk often finishes *after* the first frame.**
+  `onLoadCompleted` fires when the whole chunk has downloaded. On DASH with long
+  segments, the player decodes and shows the first frame before that. That's why
+  the step is called "fully downloaded" and the steps are listed in the order they
+  happened. The note "milestones, not exact costs" in the spec is about this.
+- **Live streams have no fixed timeline.** Their position is inside a moving
+  window, so for live streams the quality line uses *time watched* instead of
+  playback position.
+- **Use `onDrmKeysLoaded(eventTime, keyRequestInfo)`.** Media3 1.11 deprecated the
+  one-argument version.
+- **Testing freezes:** `adb emu network speed edge` throttles the emulator's
+  network. On a single-quality live stream this caused a real 18 s freeze, shown as
+  a red count and a red dot. `gsm` was so slow that playback failed with
+  `ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT`.
+- **Tabular numbers also widen the "." in values like "1.3".** That's a font
+  detail, not a bug.

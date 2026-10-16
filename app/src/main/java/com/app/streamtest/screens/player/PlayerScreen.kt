@@ -1,17 +1,29 @@
 package com.app.streamtest.screens.player
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleStartEffect
@@ -20,6 +32,12 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.app.streamtest.domain.stats.QualityBucket
+import com.app.streamtest.domain.stats.QualityLineModel
+import com.app.streamtest.domain.stats.QualitySegment
+import com.app.streamtest.domain.stats.StartMilestones
+import com.app.streamtest.player.LiveStats
+import com.app.streamtest.ui.theme.BackgroundColor
 import com.app.streamtest.ui.theme.ProblemColor
 import com.app.streamtest.ui.theme.SafeAreaHorizontal
 import com.app.streamtest.ui.theme.SafeAreaVertical
@@ -30,6 +48,7 @@ import com.app.streamtest.ui.theme.StreamTestTheme
 @Composable
 fun PlayerRoot(viewModel: PlayerViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val stats by viewModel.stats.collectAsStateWithLifecycle()
 
     // Runs onAppVisible() when the screen is started (visible), and onAppHidden() when
     // it is stopped (HOME pressed, another app on top) or when we leave the screen.
@@ -38,35 +57,89 @@ fun PlayerRoot(viewModel: PlayerViewModel = hiltViewModel()) {
         onStopOrDispose { viewModel.onAppHidden() }
     }
 
-    PlayerScreen(player = viewModel.player, state = state)
+    PlayerScreen(
+        player = viewModel.player,
+        state = state,
+        stats = stats,
+        onToggleStats = viewModel::onToggleStats,
+    )
 }
 
-// Full-screen video. BACK is handled by the NavHost and returns to the Library.
-// The stats overlay arrives in Milestone 4.
+// Full-screen video with our overlay on top. BACK is handled by the NavHost.
 @Composable
-fun PlayerScreen(player: Player?, state: PlayerState) {
+fun PlayerScreen(
+    player: Player?,
+    state: PlayerState,
+    stats: LiveStats,
+    onToggleStats: () -> Unit,
+) {
+    // Remote keys go to whatever has focus. This screen has no buttons, so the whole
+    // screen takes focus itself (focusable + requestFocus) to receive ▲ presses.
+    val screenFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { screenFocus.requestFocus() }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color.Black)
+            .focusRequester(screenFocus)
+            .focusable()
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
+                    onToggleStats()
+                    true // handled
+                } else {
+                    false // not ours (e.g. BACK): let the system handle it
+                }
+            },
     ) {
         if (player != null) VideoSurface(player = player)
 
         val error = state.errorMessage
-        if (error != null) {
-            Column(modifier = Modifier.align(Alignment.Center)) {
-                Text(text = "Can't play this stream", style = MaterialTheme.typography.titleLarge, color = ProblemColor)
-                Text(text = error, color = SecondaryTextColor)
-            }
-        } else {
-            Text(
-                text = state.title,
-                style = MaterialTheme.typography.titleMedium,
+        when {
+            error != null -> ErrorMessage(
+                error = error,
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(horizontal = SafeAreaHorizontal, vertical = SafeAreaVertical),
+                    .align(Alignment.Center)
+                    .background(BackgroundColor.copy(alpha = 0.85f))
+                    .padding(24.dp),
             )
+            state.statsVisible -> StatsOverlay(state = state, stats = stats)
         }
+    }
+}
+
+@Composable
+private fun StatsOverlay(state: PlayerState, stats: LiveStats) {
+    // A dark see-through backing so the numbers stay readable over any video.
+    val panelBackground = BackgroundColor.copy(alpha = 0.85f)
+    Box(modifier = Modifier.fillMaxSize()) {
+        StartTimePanel(
+            milestones = stats.milestones,
+            isProtected = state.isProtected,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(horizontal = SafeAreaHorizontal, vertical = SafeAreaVertical)
+                .width(300.dp)
+                .background(panelBackground)
+                .padding(16.dp),
+        )
+        StatsPanel(
+            title = state.title,
+            stats = stats,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .background(panelBackground)
+                .padding(horizontal = SafeAreaHorizontal, vertical = SafeAreaVertical),
+        )
+    }
+}
+
+@Composable
+private fun ErrorMessage(error: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(text = "Can't play this stream", style = MaterialTheme.typography.titleLarge, color = ProblemColor)
+        Text(text = error, color = SecondaryTextColor)
     }
 }
 
@@ -94,7 +167,26 @@ private fun VideoSurface(player: Player) {
 @Preview(device = Devices.TV_1080p)
 @Composable
 private fun PlayerScreenPreview() {
+    val stats = LiveStats(
+        videoWidth = 1920, videoHeight = 1080, codecs = "avc1.640028", bitrate = 4_200_000,
+        bufferedAheadMs = 12_400, freezeCount = 1, freezeTotalMs = 900, droppedFrames = 3,
+        positionMs = 95_000, durationMs = 734_000,
+        milestones = StartMilestones(manifestLoadedMs = 420, firstVideoChunkMs = 1_320, firstFrameMs = 1_640),
+        qualityLine = QualityLineModel(
+            segments = listOf(
+                QualitySegment(0f, 0.04f, QualityBucket.LOW),
+                QualitySegment(0.04f, 0.13f, QualityBucket.HIGH),
+            ),
+            freezeFractions = listOf(0.09f),
+        ),
+        playheadFraction = 0.13f,
+    )
     StreamTestTheme {
-        PlayerScreen(player = null, state = PlayerState(title = "Tears of Steel — HLS"))
+        PlayerScreen(
+            player = null,
+            state = PlayerState(title = "Tears of Steel — HLS"),
+            stats = stats,
+            onToggleStats = {},
+        )
     }
 }
