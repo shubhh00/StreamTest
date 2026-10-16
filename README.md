@@ -6,7 +6,7 @@
 well the TV handles it: how fast it starts, which quality it plays at, whether it
 freezes, and how much video is buffered. Every test is saved so you can compare.
 
-<!-- DEMO VIDEO: drag the screen recording here in GitHub's editor. -->
+https://github.com/user-attachments/assets/3e81e576-6ae6-4881-acda-32c6fe6b0b98
 
 The library is built around **films that exist in three versions**: HLS, DASH, and
 **Protected** (DASH + Widevine DRM). Because it's the same film each time, the
@@ -26,26 +26,28 @@ one's last result and a mini quality line. Along the top: what this device can d
 its screen on its own (decoding 4K and showing 4K are different), the sharpest quality
 actually played, and what it can't play.
 
-<!-- SCREENSHOT: Library -->
+<img width="1920" height="1080" alt="library" src="https://github.com/user-attachments/assets/b7859e21-faa5-459a-81a6-870280c3cf35" />
+
 
 **Player.** Six live numbers (playing at, bitrate, buffered ahead, time to start,
 freezes, dropped frames), the start time broken into steps, and a quality line that
 doubles as the progress bar. **▼** opens the quality picker: Auto (showing what adaptive
 bitrate chose), or force any quality the stream offers.
 
-<!-- SCREENSHOT: Player -->
-<!-- SCREENSHOT: Player with the quality picker open -->
+<img width="1920" height="1080" alt="player" src="https://github.com/user-attachments/assets/977a0942-1074-4ce6-8984-2afc7cb684e6" />
+
+<img width="1920" height="1080" alt="player_quality" src="https://github.com/user-attachments/assets/454b999e-6362-4a72-bbcb-4bc2381916f6" />
 
 **Log.** Every saved test, including ones that never started, grouped by film.
 Summary: median time to start, freezes per test, share of *watch time* in HD, and how
 many didn't start.
 
-<!-- SCREENSHOT: Log -->
+<img width="1920" height="1080" alt="log" src="https://github.com/user-attachments/assets/f36eaf1d-9fcd-4e7d-800f-427354610950" />
 
 **Settings.** This TV (Widevine level, HDCP), every video decoder, display modes and
 HDR, clearing results, and credits.
 
-<!-- SCREENSHOT: Settings -->
+<img width="1920" height="1080" alt="settings" src="https://github.com/user-attachments/assets/83a2884b-6eab-4514-a5e9-187fef32e02c" />
 
 ### Known limitations
 
