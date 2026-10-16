@@ -5,8 +5,10 @@ import androidx.annotation.OptIn
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.util.EventLogger
@@ -17,7 +19,10 @@ import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.catalog.findStream
 import com.app.streamtest.player.LiveStats
 import com.app.streamtest.player.PlayerFactory
+import com.app.streamtest.player.QualityOption
 import com.app.streamtest.player.StatsCollector
+import com.app.streamtest.player.overrideFor
+import com.app.streamtest.player.videoQualityOptions
 import com.app.streamtest.ui.label
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,6 +43,12 @@ data class PlayerState(
     val isProtected: Boolean = false,
     /** ▲ on the remote shows/hides the stats overlay. */
     val statsVisible: Boolean = true,
+    /** ▼ opens the Quality panel; BACK closes it. */
+    val qualityPanelOpen: Boolean = false,
+    /** Every video quality the stream offers, sharpest first. */
+    val qualities: List<QualityOption> = emptyList(),
+    /** The quality the user forced, or null for Auto. */
+    val forcedQualityKey: String? = null,
 )
 
 // @HiltViewModel + @Inject constructor: Hilt builds this ViewModel and passes in what it needs.
@@ -71,6 +82,12 @@ class PlayerViewModel @Inject constructor(
             override fun onPlayerError(error: PlaybackException) {
                 // errorCodeName is a readable name such as "ERROR_CODE_IO_BAD_HTTP_STATUS".
                 _state.update { it.copy(errorMessage = error.errorCodeName) }
+            }
+
+            // Called once the playlist/manifest is read (and again if the tracks change):
+            // that's when we know which qualities exist.
+            override fun onTracksChanged(tracks: Tracks) {
+                _state.update { it.copy(qualities = tracks.videoQualityOptions()) }
             }
         })
         // EventLogger prints every Media3 event (loads, format changes, errors) to Logcat
@@ -119,6 +136,37 @@ class PlayerViewModel @Inject constructor(
     /** ▲ on the remote. */
     fun onToggleStats() {
         _state.update { it.copy(statsVisible = !it.statsVisible) }
+    }
+
+    /** ▼ on the remote. */
+    fun onOpenQualityPanel() {
+        _state.update { it.copy(qualityPanelOpen = true) }
+    }
+
+    /** BACK while the Quality panel is open. */
+    fun onCloseQualityPanel() {
+        _state.update { it.copy(qualityPanelOpen = false) }
+    }
+
+    /**
+     * Forces one quality, or goes back to Auto when [key] is null.
+     *
+     * Auto = adaptive bitrate (ABR): the player measures how fast chunks download and
+     * keeps choosing the best quality the network can sustain, switching up and down
+     * as it changes. Forcing a quality turns that off for video.
+     */
+    fun onQualitySelected(key: String?) {
+        val builder = player.trackSelectionParameters.buildUpon()
+        if (key == null) {
+            builder.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+        } else {
+            val override = player.currentTracks.overrideFor(key) ?: return
+            builder.setOverrideForType(override)
+        }
+        // The player re-selects tracks right away and re-buffers from the current
+        // position, so the new quality shows within a moment.
+        player.trackSelectionParameters = builder.build()
+        _state.update { it.copy(forcedQualityKey = key) }
     }
 
     /** The app went to the background (HOME on the remote): don't keep playing unseen. */

@@ -9,8 +9,11 @@ import java.util.Locale
 /** "1080p · H.264", or "—" before the first video format arrives. */
 fun formatPlayingAt(width: Int?, height: Int?, codecs: String?, sampleMimeType: String?): String {
     if (width == null || height == null || width <= 0 || height <= 0) return "—"
-    return "${standardHeight(width, height)}p · ${codecName(codecs, sampleMimeType)}"
+    return "${formatResolutionName(width, height)} · ${codecName(codecs, sampleMimeType)}"
 }
+
+/** "1080p" (see standardHeight for wide films). */
+fun formatResolutionName(width: Int, height: Int): String = "${standardHeight(width, height)}p"
 
 /**
  * Readable codec name. The "codecs" string comes from the playlist/manifest,

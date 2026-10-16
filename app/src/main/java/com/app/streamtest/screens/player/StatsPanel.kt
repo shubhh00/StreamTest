@@ -36,7 +36,7 @@ fun StatsPanel(title: String, stats: LiveStats, modifier: Modifier = Modifier) {
                 color = SecondaryTextColor,
             )
             Spacer(Modifier.width(24.dp))
-            Text(text = "▲ hide stats", style = MaterialTheme.typography.bodySmall, color = DimTextColor)
+            Text(text = "▲ hide stats   ▼ quality", style = MaterialTheme.typography.bodySmall, color = DimTextColor)
         }
         Spacer(Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth()) {

@@ -316,3 +316,56 @@ calls in a Compose `Canvas`, with no extra libraries.
   `ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT`.
 - **Tabular numbers also widen the "." in values like "1.3".** That's a font
   detail, not a bug.
+
+---
+
+## Milestone 5 — DRM + quality picker
+
+### What was built
+
+- **Protected streams.** Widevine playback already worked from Milestone 3 (the
+  `DrmConfiguration` in `PlayerFactory`). All four Protected streams play on the
+  emulator's Widevine L3, and the start panel shows the "DRM license received" step.
+- **The Quality panel** (top left):
+  - ▼ opens it.
+  - It lists **Auto**, with what Auto is playing right now ("now 720p · 7.2 Mbps"),
+    then every quality the stream offers, sharpest first, with its resolution and bitrate.
+  - OK forces that quality, and OK on Auto gives control back to the player.
+  - BACK closes the panel; a second BACK leaves the Player.
+
+### New concepts
+
+**Tracks and track groups.** `player.currentTracks` lists everything the stream
+offers, in groups. An adaptive stream has one video group holding the same video
+at several qualities, and the player may switch freely between the tracks of a group.
+
+**Adaptive bitrate (ABR) = "Auto".** The player measures how fast chunks download
+and keeps choosing the best quality the network can sustain. In this test, Auto
+started at 144p, went to 480p, then 720p, then 1920×856 as the bandwidth estimate grew.
+
+**Forcing a quality.** A `TrackSelectionOverride(group, trackIndex)` means "for this
+group, use exactly this track". It's set through
+`player.trackSelectionParameters.buildUpon().setOverrideForType(...)`.
+`clearOverridesOfType(C.TRACK_TYPE_VIDEO)` turns Auto back on. The player re-selects
+right away and re-buffers from the current position: forcing 144p took about 4 seconds.
+
+**`BackHandler`.** Catches BACK before the NavHost does, but only while
+`enabled = true`. Here it's enabled only while the Quality panel is open, so the
+first BACK closes the panel and the next BACK leaves the screen.
+
+**Keeping focus inside a panel.** `Modifier.focusProperties { onExit = { cancelFocusChange() } }.focusGroup()`
+stops D-pad focus from leaving the panel while it's open.
+
+**Key events bubble up.** A key press goes to the focused item first, then to its
+parents. The Player screen catches ▲ / ▼ on the parent `Box`, so it ignores them
+while the panel is open. Otherwise ▼ couldn't move down the list.
+
+### Gotchas
+
+- **▼ opens the panel, but BACK closes it.** ▼ is needed to move down the list,
+  so it can't also close the panel.
+- **Changing quality causes a short re-buffer, and it counts as a freeze.** Forcing
+  144p gave a 2.7 s freeze, and going back to Auto gave another. The viewer really
+  does see that stall, but it isn't a network or TV problem.
+- **Emulator only has Widevine L3.** L1 (hardware-protected) playback needs a real
+  Android TV or phone, for the README findings.

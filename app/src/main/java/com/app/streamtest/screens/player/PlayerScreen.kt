@@ -1,5 +1,6 @@
 package com.app.streamtest.screens.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -62,21 +63,37 @@ fun PlayerRoot(viewModel: PlayerViewModel = hiltViewModel()) {
         state = state,
         stats = stats,
         onToggleStats = viewModel::onToggleStats,
+        onOpenQualityPanel = viewModel::onOpenQualityPanel,
+        onCloseQualityPanel = viewModel::onCloseQualityPanel,
+        onQualitySelected = viewModel::onQualitySelected,
     )
 }
 
-// Full-screen video with our overlay on top. BACK is handled by the NavHost.
+// Full-screen video with our overlay on top. BACK is handled by the NavHost
+// (or closes the Quality panel first, when it's open).
 @Composable
 fun PlayerScreen(
     player: Player?,
     state: PlayerState,
     stats: LiveStats,
     onToggleStats: () -> Unit,
+    onOpenQualityPanel: () -> Unit,
+    onCloseQualityPanel: () -> Unit,
+    onQualitySelected: (key: String?) -> Unit,
 ) {
-    // Remote keys go to whatever has focus. This screen has no buttons, so the whole
-    // screen takes focus itself (focusable + requestFocus) to receive ▲ presses.
+    // Remote keys go to whatever has focus. Normally nothing on this screen is a button,
+    // so the whole screen takes focus itself (focusable + requestFocus) to receive ▲ / ▼.
     val screenFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { screenFocus.requestFocus() }
+    val qualityPanelFocus = remember { FocusRequester() }
+
+    // When the Quality panel opens, focus jumps to its chosen row; when it closes,
+    // focus goes back to the screen.
+    LaunchedEffect(state.qualityPanelOpen) {
+        if (state.qualityPanelOpen) qualityPanelFocus.requestFocus() else screenFocus.requestFocus()
+    }
+
+    // BackHandler catches BACK before the NavHost does, but only while it's enabled.
+    BackHandler(enabled = state.qualityPanelOpen) { onCloseQualityPanel() }
 
     Box(
         modifier = Modifier
@@ -85,11 +102,13 @@ fun PlayerScreen(
             .focusRequester(screenFocus)
             .focusable()
             .onKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
-                    onToggleStats()
-                    true // handled
-                } else {
-                    false // not ours (e.g. BACK): let the system handle it
+                // Key events from the panel rows bubble up to here too. While the panel is
+                // open we must not use ▲ / ▼, or the D-pad couldn't move inside the list.
+                if (event.type != KeyEventType.KeyDown || state.qualityPanelOpen) return@onKeyEvent false
+                when (event.key) {
+                    Key.DirectionUp -> { onToggleStats(); true }
+                    Key.DirectionDown -> { onOpenQualityPanel(); true }
+                    else -> false // not ours (e.g. BACK): let the system handle it
                 }
             },
     ) {
@@ -101,18 +120,37 @@ fun PlayerScreen(
                 error = error,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .background(BackgroundColor.copy(alpha = 0.85f))
+                    .background(PanelBackground)
                     .padding(24.dp),
             )
-            state.statsVisible -> StatsOverlay(state = state, stats = stats)
+            else -> {
+                if (state.statsVisible) StatsOverlay(state = state, stats = stats)
+                if (state.qualityPanelOpen) {
+                    QualityPanel(
+                        qualities = state.qualities,
+                        forcedQualityKey = state.forcedQualityKey,
+                        stats = stats,
+                        initialFocus = qualityPanelFocus,
+                        onQualitySelected = onQualitySelected,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(horizontal = SafeAreaHorizontal, vertical = SafeAreaVertical)
+                            .width(300.dp)
+                            .background(PanelBackground)
+                            .padding(vertical = 12.dp),
+                    )
+                }
+            }
         }
     }
 }
 
+// A dark see-through backing so text stays readable over any video.
+private val PanelBackground = BackgroundColor.copy(alpha = 0.85f)
+
 @Composable
 private fun StatsOverlay(state: PlayerState, stats: LiveStats) {
-    // A dark see-through backing so the numbers stay readable over any video.
-    val panelBackground = BackgroundColor.copy(alpha = 0.85f)
+    val panelBackground = PanelBackground
     Box(modifier = Modifier.fillMaxSize()) {
         StartTimePanel(
             milestones = stats.milestones,
@@ -187,6 +225,9 @@ private fun PlayerScreenPreview() {
             state = PlayerState(title = "Tears of Steel — HLS"),
             stats = stats,
             onToggleStats = {},
+            onOpenQualityPanel = {},
+            onCloseQualityPanel = {},
+            onQualitySelected = {},
         )
     }
 }
