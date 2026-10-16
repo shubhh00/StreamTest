@@ -34,6 +34,7 @@ class AndroidDeviceInfoRepository @Inject constructor(
         val hdrTypes = if (display != null) supportedHdrTypes(display) else IntArray(0)
         val decoders = videoDecoderMimeTypes()
         return DeviceCapabilities(
+            deviceName = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
             widevineLevel = readWidevineLevel(),
             supports4k = display?.supportedModes?.any { it.physicalWidth >= 3840 && it.physicalHeight >= 2160 } ?: false,
             supportsHdr10 = Display.HdrCapabilities.HDR_TYPE_HDR10 in hdrTypes,

@@ -2,8 +2,10 @@ package com.app.streamtest.data.di
 
 import com.app.streamtest.data.catalog.AssetCatalogRepository
 import com.app.streamtest.data.device.AndroidDeviceInfoRepository
+import com.app.streamtest.data.results.RoomResultsRepository
 import com.app.streamtest.domain.catalog.CatalogRepository
 import com.app.streamtest.domain.device.DeviceInfoRepository
+import com.app.streamtest.domain.results.ResultsRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -20,4 +22,7 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindDeviceInfoRepository(repository: AndroidDeviceInfoRepository): DeviceInfoRepository
+
+    @Binds
+    abstract fun bindResultsRepository(repository: RoomResultsRepository): ResultsRepository
 }

@@ -18,6 +18,10 @@ kotlin {
 }
 
 dependencies {
+    // Only for Flow (repositories send updates as a Flow). Plain Kotlin, no Android.
+    // "api" (not "implementation") because Flow appears in our public interfaces.
+    api(libs.kotlinx.coroutines.core)
+
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
 }

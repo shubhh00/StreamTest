@@ -47,7 +47,10 @@ import com.app.streamtest.ui.theme.StreamTestTheme
 
 // Root: gets the ViewModel from Hilt and passes plain values to the Screen.
 @Composable
-fun PlayerRoot(viewModel: PlayerViewModel = hiltViewModel()) {
+fun PlayerRoot(
+    onClose: () -> Unit,
+    viewModel: PlayerViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val stats by viewModel.stats.collectAsStateWithLifecycle()
 
@@ -66,11 +69,12 @@ fun PlayerRoot(viewModel: PlayerViewModel = hiltViewModel()) {
         onOpenQualityPanel = viewModel::onOpenQualityPanel,
         onCloseQualityPanel = viewModel::onCloseQualityPanel,
         onQualitySelected = viewModel::onQualitySelected,
+        onExit = { viewModel.onExit(close = onClose) },
     )
 }
 
-// Full-screen video with our overlay on top. BACK is handled by the NavHost
-// (or closes the Quality panel first, when it's open).
+// Full-screen video with our overlay on top.
+// BACK closes the Quality panel if it's open; otherwise it saves the test and leaves.
 @Composable
 fun PlayerScreen(
     player: Player?,
@@ -80,6 +84,7 @@ fun PlayerScreen(
     onOpenQualityPanel: () -> Unit,
     onCloseQualityPanel: () -> Unit,
     onQualitySelected: (key: String?) -> Unit,
+    onExit: () -> Unit,
 ) {
     // Remote keys go to whatever has focus. Normally nothing on this screen is a button,
     // so the whole screen takes focus itself (focusable + requestFocus) to receive ▲ / ▼.
@@ -92,8 +97,11 @@ fun PlayerScreen(
         if (state.qualityPanelOpen) qualityPanelFocus.requestFocus() else screenFocus.requestFocus()
     }
 
-    // BackHandler catches BACK before the NavHost does, but only while it's enabled.
-    BackHandler(enabled = state.qualityPanelOpen) { onCloseQualityPanel() }
+    // BackHandler catches BACK before the NavHost does. We always want it: BACK first
+    // closes the Quality panel, and otherwise saves the test before leaving.
+    BackHandler {
+        if (state.qualityPanelOpen) onCloseQualityPanel() else onExit()
+    }
 
     Box(
         modifier = Modifier
@@ -228,6 +236,7 @@ private fun PlayerScreenPreview() {
             onOpenQualityPanel = {},
             onCloseQualityPanel = {},
             onQualitySelected = {},
+            onExit = {},
         )
     }
 }

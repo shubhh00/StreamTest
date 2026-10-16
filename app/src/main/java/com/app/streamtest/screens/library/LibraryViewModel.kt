@@ -8,6 +8,8 @@ import com.app.streamtest.domain.catalog.Film
 import com.app.streamtest.domain.device.DeviceInfoRepository
 import com.app.streamtest.domain.device.DeviceSummary
 import com.app.streamtest.domain.device.toSummary
+import com.app.streamtest.domain.results.ResultsRepository
+import com.app.streamtest.domain.results.TestResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,12 +33,15 @@ data class LibraryState(
     val deviceSummary: DeviceSummary? = null,
     /** The row the user last opened, so focus can go back to it after the Player. */
     val lastOpenedStreamId: String? = null,
+    /** Newest saved result per stream id, shown on the rows. */
+    val lastResults: Map<String, TestResult> = emptyMap(),
 )
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val deviceInfoRepository: DeviceInfoRepository,
+    private val resultsRepository: ResultsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LibraryState())
@@ -51,6 +56,12 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             val summary = deviceInfoRepository.getCapabilities().toSummary()
             _state.update { it.copy(deviceSummary = summary) }
+        }
+        // collect keeps running: every time a test is saved, Room sends a fresh map.
+        viewModelScope.launch {
+            resultsRepository.observeLatestPerStream().collect { latest ->
+                _state.update { it.copy(lastResults = latest) }
+            }
         }
     }
 

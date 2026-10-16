@@ -15,8 +15,13 @@ import androidx.media3.exoplayer.util.EventLogger
 import com.app.streamtest.BuildConfig
 import com.app.streamtest.Routes
 import com.app.streamtest.domain.catalog.CatalogRepository
+import com.app.streamtest.domain.catalog.FoundStream
 import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.catalog.findStream
+import com.app.streamtest.domain.results.PlaybackTimeline
+import com.app.streamtest.domain.results.ResultsRepository
+import com.app.streamtest.domain.results.TestResult
+import com.app.streamtest.domain.stats.timeAtHdOrBetterPercent
 import com.app.streamtest.player.LiveStats
 import com.app.streamtest.player.PlayerFactory
 import com.app.streamtest.player.QualityOption
@@ -60,6 +65,7 @@ class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     @ApplicationContext context: Context,
     private val catalogRepository: CatalogRepository,
+    private val resultsRepository: ResultsRepository,
 ) : ViewModel() {
 
     // Navigation copies route arguments (the {streamId} in "player/{streamId}")
@@ -75,6 +81,11 @@ class PlayerViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state.asStateFlow()
+
+    // Needed when the test is saved.
+    private var playingStream: FoundStream? = null
+    private var startedAtMillis = 0L
+    private var isClosing = false
 
     init {
         statsCollector.attach()
@@ -119,13 +130,54 @@ class PlayerViewModel @Inject constructor(
             )
         }
 
+        playingStream = found
         player.setMediaItem(PlayerFactory.createMediaItem(found.stream))
         // Start-up times are measured from this moment.
         statsCollector.onPrepare()
+        startedAtMillis = System.currentTimeMillis()
         // prepare() starts the work: fetch the playlist/manifest, then the first chunks.
         player.prepare()
         // playWhenReady = "start playing as soon as enough video is buffered".
         player.playWhenReady = true
+    }
+
+    /**
+     * BACK on the Player: save the test (if the video ever started), then [close] the screen.
+     * The save runs before closing, so the Library already shows the new result.
+     */
+    fun onExit(close: () -> Unit) {
+        if (isClosing) return // a second BACK press while saving
+        isClosing = true
+        viewModelScope.launch {
+            buildResult()?.let { resultsRepository.save(it) }
+            close()
+        }
+    }
+
+    /** The test as it stands now, or null if the first frame never showed. */
+    private fun buildResult(): TestResult? {
+        val stream = playingStream ?: return null
+        statsCollector.onTick() // freshest numbers
+        val stats = stats.value
+        val timeToFirstFrameMs = stats.milestones.firstFrameMs ?: return null
+        return TestResult(
+            streamId = stream.stream.id,
+            filmTitle = stream.title,
+            versionType = stream.stream.type,
+            startedAtMillis = startedAtMillis,
+            timeToFirstFrameMs = timeToFirstFrameMs,
+            freezeCount = stats.freezeCount,
+            freezeTotalMs = stats.freezeTotalMs,
+            droppedFrames = stats.droppedFrames,
+            timeAtHdOrBetterPercent = timeAtHdOrBetterPercent(stats.qualityChanges, stats.positionMs),
+            timeline = PlaybackTimeline(
+                qualityChanges = stats.qualityChanges,
+                freezes = stats.freezes,
+                playedUntilMs = stats.positionMs,
+                lengthMs = stats.durationMs ?: stats.positionMs,
+            ),
+            milestones = stats.milestones,
+        )
     }
 
     /** The app is visible again (e.g. back from the TV home screen): carry on playing. */

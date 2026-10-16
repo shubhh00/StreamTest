@@ -369,3 +369,65 @@ while the panel is open. Otherwise ▼ couldn't move down the list.
   does see that stall, but it isn't a network or TV problem.
 - **Emulator only has Widevine L3.** L1 (hardware-protected) playback needs a real
   Android TV or phone, for the README findings.
+
+---
+
+## Milestone 6 — Results
+
+### What was built
+
+- **Saving.** BACK in the Player saves a `TestResult` to Room, but only if the first
+  frame was shown, then leaves the screen. If the Quality panel is open, BACK
+  closes it first.
+- **Library rows** show the last saved result per stream ("1507 ms to start",
+  "4143 ms to start · 1 freeze") instead of "Not tested yet".
+- **Log screen:**
+  - The device name and test count.
+  - A summary line: median time to start · freezes per test · % of time in HD or better.
+  - A table grouped by film: Film · Version · To start · Freezes · a 3dp quality
+    line · When. Focus starts on the first row, and ▲▼ moves through the rows.
+- **New unit tests:** stats math (time in HD, median, summary), grouping by film,
+  and a database-row round trip. 27 tests in total.
+
+### New concepts
+
+**Room in three parts:**
+- `@Entity`: a table with one column per field.
+- `@Dao`: an interface of queries; Room writes the code for it.
+- `@Database`: ties them together.
+
+The DAO's `observeAll(): Flow<List<…>>` re-runs the query and sends a new list
+whenever the table changes. That's why the Library updates right after a save,
+without any refresh code.
+
+**"Latest per stream" in SQL:**
+`WHERE id IN (SELECT MAX(id) FROM test_results GROUP BY streamId)`. The biggest
+auto-generated id in each group is the newest row.
+
+**JSON columns as a shortcut.** The quality timeline and the start milestones are
+stored as JSON text (kotlinx.serialization). We never search inside them, only
+redraw them, so this is simpler than two extra tables. A unit test checks that a
+result survives the trip to a row and back unchanged.
+
+**Hilt `@Provides` vs `@Binds`:**
+- `@Binds` maps an interface to a class Hilt can already build (it has an
+  `@Inject` constructor).
+- `@Provides` is a function for things built another way, like
+  `Room.databaseBuilder(...)`.
+
+**Saving before leaving.** `onExit(close)` launches a coroutine that awaits the
+insert, then calls `close()` (`popBackStack`). The Library comes back already
+showing the new result. A flag ignores a second BACK press during the save.
+
+**`api` vs `implementation` in Gradle.** `:domain` exposes `Flow` in its public
+interfaces, so it uses `api(coroutines)`, which makes `Flow` visible to the
+modules that depend on `:domain`.
+
+### Gotchas
+
+- **The focus background hid the quality line's track.** The focused Log row
+  first used the same color as the empty track, so the track vanished. Focused
+  rows now use their own shade (`RowFocusColor`).
+- **Results are only saved through BACK.** Pressing HOME, or the app being killed,
+  saves nothing. That's fine for v1, and the spec asks for exactly this.
+- **A forced quality switch is saved as a freeze too** (see Milestone 5).

@@ -97,6 +97,7 @@ fun LibraryScreen(
                 selection = state.selection,
                 filmFocusRequesters = filmFocusRequesters,
                 streamFocusRequesters = streamFocusRequesters,
+                lastResults = state.lastResults,
                 onFilmFocused = onFilmFocused,
                 onExtraFocused = onExtraFocused,
                 onOpenPlayer = onOpenPlayer,
@@ -109,6 +110,7 @@ fun LibraryScreen(
                     FilmDetailPanel(
                         film = film,
                         streamFocusRequesters = streamFocusRequesters,
+                        lastResults = state.lastResults,
                         filmFocus = filmFocusRequesters[selection.index],
                         onOpenPlayer = onOpenPlayer,
                         modifier = panelModifier,

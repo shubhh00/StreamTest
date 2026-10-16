@@ -26,7 +26,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.app.streamtest.domain.catalog.ExtraStream
 import com.app.streamtest.domain.catalog.Film
-import com.app.streamtest.ui.NOT_TESTED_YET
+import com.app.streamtest.domain.results.TestResult
+import com.app.streamtest.ui.resultTextFor
 import com.app.streamtest.ui.components.StreamRow
 import com.app.streamtest.ui.theme.DimTextColor
 import com.app.streamtest.ui.theme.FilmTitleStyle
@@ -47,6 +48,7 @@ fun FilmColumn(
     selection: LibrarySelection,
     filmFocusRequesters: List<FocusRequester>,
     streamFocusRequesters: Map<String, FocusRequester>,
+    lastResults: Map<String, TestResult>,
     onFilmFocused: (index: Int) -> Unit,
     onExtraFocused: (index: Int) -> Unit,
     onOpenPlayer: (streamId: String) -> Unit,
@@ -79,7 +81,7 @@ fun FilmColumn(
             StreamRow(
                 title = extra.title,
                 subtitle = extra.note,
-                result = NOT_TESTED_YET,
+                result = resultTextFor(extra.stream.id, lastResults),
                 onClick = { onOpenPlayer(extra.stream.id) },
                 onFocused = { onExtraFocused(index) },
                 modifier = Modifier

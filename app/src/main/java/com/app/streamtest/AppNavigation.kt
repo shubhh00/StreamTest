@@ -7,7 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.streamtest.screens.library.LibraryRoot
-import com.app.streamtest.screens.log.LogScreen
+import com.app.streamtest.screens.log.LogRoot
 import com.app.streamtest.screens.player.PlayerRoot
 
 // The three routes of the app (AGENTS.md §4). No nested graphs.
@@ -34,7 +34,7 @@ fun AppNavigation() {
             )
         }
         composable(Routes.LOG) {
-            LogScreen(
+            LogRoot(
                 onOpenLibrary = { navController.popBackStack(Routes.LIBRARY, inclusive = false) },
             )
         }
@@ -42,7 +42,7 @@ fun AppNavigation() {
             route = Routes.PLAYER,
             arguments = listOf(navArgument(Routes.STREAM_ID_ARG) { type = NavType.StringType }),
         ) {
-            PlayerRoot()
+            PlayerRoot(onClose = { navController.popBackStack() })
         }
     }
 }

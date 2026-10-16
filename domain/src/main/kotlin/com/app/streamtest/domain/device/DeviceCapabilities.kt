@@ -2,6 +2,8 @@ package com.app.streamtest.domain.device
 
 /** What this TV can play. Read once at startup (see AGENTS.md §7). */
 data class DeviceCapabilities(
+    /** e.g. "Google Chromecast" or the emulator's model name. Shown in the Log. */
+    val deviceName: String = "",
     /** "L1" (hardware-protected), "L3" (software only), or null if the device has no Widevine. */
     val widevineLevel: String?,
     /** The display has a 3840×2160 (or larger) mode. */

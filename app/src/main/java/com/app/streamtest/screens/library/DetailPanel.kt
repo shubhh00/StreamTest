@@ -16,9 +16,10 @@ import com.app.streamtest.domain.catalog.ExtraStream
 import com.app.streamtest.domain.catalog.Film
 import com.app.streamtest.domain.catalog.StreamType
 import com.app.streamtest.domain.catalog.StreamVersion
+import com.app.streamtest.domain.results.TestResult
 import com.app.streamtest.ui.defaultSubtitle
 import com.app.streamtest.ui.label
-import com.app.streamtest.ui.NOT_TESTED_YET
+import com.app.streamtest.ui.resultTextFor
 import com.app.streamtest.ui.components.StreamRow
 import com.app.streamtest.ui.components.UnavailableStreamRow
 import com.app.streamtest.ui.theme.DimTextColor
@@ -30,6 +31,7 @@ import java.net.URI
 fun FilmDetailPanel(
     film: Film,
     streamFocusRequesters: Map<String, FocusRequester>,
+    lastResults: Map<String, TestResult>,
     filmFocus: FocusRequester,
     onOpenPlayer: (streamId: String) -> Unit,
     modifier: Modifier = Modifier,
@@ -50,7 +52,7 @@ fun FilmDetailPanel(
                 StreamRow(
                     title = type.label(),
                     subtitle = version.subtitle ?: type.defaultSubtitle(),
-                    result = NOT_TESTED_YET,
+                    result = resultTextFor(version.id, lastResults),
                     onClick = { onOpenPlayer(version.id) },
                     modifier = Modifier
                         // Lets code focus this exact row: RIGHT from the film, or back from the Player.
