@@ -6,7 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.app.streamtest.screens.library.LibraryScreen
+import com.app.streamtest.screens.library.LibraryRoot
 import com.app.streamtest.screens.log.LogScreen
 import com.app.streamtest.screens.player.PlayerRoot
 
@@ -28,7 +28,7 @@ fun AppNavigation() {
 
     NavHost(navController = navController, startDestination = Routes.LIBRARY) {
         composable(Routes.LIBRARY) {
-            LibraryScreen(
+            LibraryRoot(
                 onOpenPlayer = { streamId -> navController.navigate(Routes.player(streamId)) },
                 onOpenLog = { navController.navigate(Routes.LOG) { launchSingleTop = true } },
             )

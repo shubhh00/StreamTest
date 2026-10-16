@@ -1,0 +1,140 @@
+{
+  "films": [
+    {
+      "id": "tears",
+      "title": "Tears of Steel",
+      "description": "12 min · open movie by the Blender Foundation",
+      "versions": [
+        {
+          "id": "tears-hls",
+          "type": "HLS",
+          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+          "subtitle": "Adaptive · up to 1680×750"
+        },
+        {
+          "id": "tears-dash",
+          "type": "DASH",
+          "url": "https://storage.googleapis.com/wvmedia/clear/h264/tears/tears.mpd",
+          "subtitle": "Adaptive · up to 1920×856"
+        },
+        {
+          "id": "tears-drm",
+          "type": "DASH_DRM",
+          "url": "https://storage.googleapis.com/wvmedia/cenc/h264/tears/tears.mpd",
+          "licenseUrl": "https://proxy.uat.widevine.com/proxy?video_id=2015_tears&provider=widevine_test",
+          "subtitle": "Widevine DRM · up to 1920×856"
+        }
+      ]
+    },
+    {
+      "id": "bbb",
+      "title": "Big Buck Bunny",
+      "description": "10 min · open movie by the Blender Foundation · DASH versions are 60 fps",
+      "versions": [
+        {
+          "id": "bbb-hls",
+          "type": "HLS",
+          "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+          "subtitle": "Adaptive · up to 1080p"
+        },
+        {
+          "id": "bbb-dash",
+          "type": "DASH",
+          "url": "https://storage.googleapis.com/exoplayer-test-media-1/60fps/bbb-clear-1080/manifest.mpd",
+          "subtitle": "Adaptive · up to 1080p · 60 fps"
+        },
+        {
+          "id": "bbb-drm",
+          "type": "DASH_DRM",
+          "url": "https://storage.googleapis.com/exoplayer-test-media-1/60fps/bbb-wv-1080/manifest.mpd",
+          "licenseUrl": "https://proxy.uat.widevine.com/proxy?provider=widevine_test",
+          "subtitle": "Widevine DRM · up to 1080p · 60 fps"
+        }
+      ]
+    },
+    {
+      "id": "sintel",
+      "title": "Sintel",
+      "description": "15 min · open movie by the Blender Foundation · no HLS version",
+      "versions": [
+        {
+          "id": "sintel-dash",
+          "type": "DASH",
+          "url": "https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd",
+          "subtitle": "Adaptive · up to 4K"
+        },
+        {
+          "id": "sintel-drm",
+          "type": "DASH_DRM",
+          "url": "https://storage.googleapis.com/shaka-demo-assets/sintel-widevine/dash.mpd",
+          "licenseUrl": "https://cwip-shaka-proxy.appspot.com/no_auth",
+          "subtitle": "Widevine DRM · up to 4K"
+        }
+      ]
+    },
+    {
+      "id": "angel-one",
+      "title": "Angel One",
+      "description": "1 min · short SD clip from the Shaka Player demos",
+      "versions": [
+        {
+          "id": "angel-one-hls",
+          "type": "HLS",
+          "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8",
+          "subtitle": "Adaptive · up to 576p"
+        },
+        {
+          "id": "angel-one-dash",
+          "type": "DASH",
+          "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd",
+          "subtitle": "Adaptive · up to 576p"
+        },
+        {
+          "id": "angel-one-drm",
+          "type": "DASH_DRM",
+          "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine/dash.mpd",
+          "licenseUrl": "https://cwip-shaka-proxy.appspot.com/no_auth",
+          "subtitle": "Widevine DRM · up to 576p"
+        }
+      ]
+    }
+  ],
+  "extras": [
+    {
+      "id": "bbb-4k60",
+      "title": "Big Buck Bunny 4K",
+      "type": "DASH",
+      "url": "https://storage.googleapis.com/exoplayer-test-media-1/60fps/bbb-clear-2160/manifest.mpd",
+      "note": "Checks 4K at 60 fps (H.264)"
+    },
+    {
+      "id": "apple-hevc",
+      "title": "Apple HEVC sample",
+      "type": "HLS",
+      "url": "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8",
+      "note": "Checks HEVC (H.265), up to 1080p"
+    },
+    {
+      "id": "av1-drm",
+      "title": "AV1 sample",
+      "type": "DASH_DRM",
+      "url": "https://storage.googleapis.com/exoplayer-test-media-1/widevine/av1/dash_manifest.mpd",
+      "licenseUrl": "https://proxy.uat.widevine.com/proxy?provider=widevine_test",
+      "note": "Checks AV1 decoding (Widevine L3)"
+    },
+    {
+      "id": "akamai-live",
+      "title": "Akamai live stream",
+      "type": "HLS",
+      "url": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+      "note": "Live 1080p · no fixed end"
+    },
+    {
+      "id": "apple-bipbop-low",
+      "title": "Apple basic stream",
+      "type": "HLS",
+      "url": "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8",
+      "note": "Low bitrate · 40 kbps to 1.9 Mbps"
+    }
+  ]
+}

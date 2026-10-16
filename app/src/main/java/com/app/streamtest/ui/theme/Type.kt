@@ -5,6 +5,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Typography
 import com.app.streamtest.R
 
@@ -32,6 +33,16 @@ val SchibstedGrotesk = FontFamily(
 // "tnum" = tabular numbers: every digit has the same width, so changing stats
 // don't make the text jump around. Use for all numbers on screen.
 const val TabularNumbers = "tnum"
+
+// Film titles in the Library's left column. Regular weight, not bold.
+// The spec asks for 54sp, but a 1080p TV is only 960dp wide and "Big Buck Bunny"
+// didn't fit in half the screen at 54sp, so we use 48sp.
+val FilmTitleStyle = TextStyle(
+    fontFamily = SchibstedGrotesk,
+    fontWeight = FontWeight.Normal,
+    fontSize = 48.sp,
+    lineHeight = 58.sp,
+)
 
 private val default = Typography()
 
