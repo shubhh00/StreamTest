@@ -1,5 +1,7 @@
 # StreamTest
 
+[![Build](https://github.com/shubhh00/StreamTest/actions/workflows/build.yml/badge.svg)](https://github.com/shubhh00/StreamTest/actions/workflows/build.yml)
+
 **A speed test for video on Android TV.** Pick a film, it plays, and the app shows how
 well the TV handles it: how fast it starts, which quality it plays at, whether it
 freezes, and how much video is buffered. Every test is saved so you can compare.

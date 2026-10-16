@@ -643,3 +643,33 @@ That gives the real Schibsted Grotesk shapes, sharp at every size.
   on a phone, the TV layout overflowed and the film list could be dragged by touch.
   TVs are always landscape, so this only affects phones used for testing. Android 16
   ignores fixed orientations on large screens only, not on phones.
+
+---
+
+## Continuous integration (GitHub Actions)
+
+### What was built
+
+`.github/workflows/build.yml` runs `./gradlew assembleDebug test` on every push and
+pull request. The README shows a badge with the result of the latest run.
+
+### New concepts
+
+**What CI is for.** A clean machine builds the project on every push. It catches
+"works on my machine" problems: a file not committed, a test broken by a change in
+another module, a setting that only lives in Android Studio.
+
+**A workflow file.** A workflow is YAML in `.github/workflows/`. `on:` says when it runs,
+`runs-on:` picks the machine, and `steps:` either run a shell command (`run:`) or use a
+ready-made action (`uses:`):
+- `actions/checkout` gets the code.
+- `actions/setup-java` installs the JDK.
+- `gradle/actions/setup-gradle` caches Gradle downloads between runs.
+
+**No Android setup step.** GitHub's Ubuntu runners come with the Android SDK, and the
+Android Gradle Plugin downloads the missing SDK platform (37) itself.
+
+### Gotchas
+
+- **`gradlew` must be executable in git** (mode `100755`), or Linux refuses to run it.
+  Projects created on Windows sometimes lose that.

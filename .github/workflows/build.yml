@@ -1,0 +1,26 @@
+# Builds the app and runs every unit test on each push and pull request.
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # JDK 21: the same version Android Studio bundles. GitHub's Ubuntu runners
+      # already have the Android SDK; Gradle downloads the SDK platform it needs.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Caches Gradle's downloads between runs, so later builds are faster.
+      - uses: gradle/actions/setup-gradle@v6
+
+      # Plain `test`, not `testDebugUnitTest`: :domain is a pure Kotlin module and
+      # only has a `test` task.
+      - run: ./gradlew assembleDebug test
